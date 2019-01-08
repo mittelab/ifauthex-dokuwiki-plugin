@@ -176,39 +176,41 @@ class ElementInstance {
     public function definition() { return $this->_definition; }
     public function args() { return $this->_args; }
 
-    public function isFullyExpanded() {
+    public function isExpanded($recursive=true) {
         if ($this->definition() !== null && $this->definition()->fixing() == Fixing::None) {
             return true;
         }
         foreach ($this->args() as $arg) {
-            if ($arg instanceof TokenInstance || !$arg->isFullyExpanded()) {
+            if ($arg instanceof TokenInstance || ($recursive && !$arg->isExpanded($recursive))) {
                 return false;
             }
         }
         return true;
     }
 
-    public function recursiveExpand($elmDef) {
-        if ($this->isFullyExpanded()) {
+    public function expand($elmDef, $recursive=true) {
+        if ($this->isExpanded($recursive)) {
             return;
         }
         $elmDef->spliceInstancesIn($this->_args);
-        foreach ($this->args() as $arg) {
-            if ($arg instanceof ElementInstance && !$arg->isFullyExpanded()) {
-                $arg->recursiveExpand($elmDef);
+        if ($recursive) {
+            foreach ($this->args() as $arg) {
+                if ($arg instanceof ElementInstance && !$arg->isExpanded($recursive)) {
+                    $arg->expand($elmDef);
+                }
             }
         }
     }
 
-    public function recursiveFindUnexpandedToken() {
-        if ($this->isFullyExpanded()) {
+    public function findUnexpandedToken($recursive=true) {
+        if ($this->isExpanded($recursive)) {
             return null;
         }
         foreach ($this->args() as $arg) {
             if ($arg instanceof TokenInstance) {
                 return $arg;
-            } else {
-                $tok = $arg->recursiveFindUnexpandedToken();
+            } elseif ($recursive) {
+                $tok = $arg->findUnexpandedToken($recursive);
                 if ($tok !== null) {
                     return $tok;
                 }
@@ -217,7 +219,7 @@ class ElementInstance {
         throw LogicException('A fully expanded element instance has no stray token!');
     }
 
-    public function recursivePrint($indent=0) {
+    public function print($indent=0) {
         if ($this->definition() !== null) {
             echo str_repeat('  ', $indent) . $this->definition()->name() . "\n";
         }
@@ -225,8 +227,32 @@ class ElementInstance {
             if ($arg instanceof TokenInstance) {
                 echo str_repeat('  ', $indent + 1) . $arg;
             } else {
-                $arg->recursivePrint($indent + 1);
+                $arg->print($indent + 1);
             }
+        }
+    }
+
+    public function evaluate() {
+        if (!$this->isExpanded()) {
+            throw new RuntimeException('An expression that is not fully expanded cannot be evaluated.');
+        }
+        if ($this->definition() === null) {
+            switch (count($this->args())) {
+                case 0:
+                    return null;
+                    break;
+                case 1:
+                    return $this->args()[0]->evaluate();
+                default:
+                    throw new InvalidArgumentException('An expression that has more than a single root is not well defined.');
+                    break;
+            }
+        } else {
+            $values = array();
+            foreach ($this->args() as $arg) {
+                $values[] = $arg->evaluate();
+            }
+            return $this->definition()->evaluate($values);
         }
     }
 }
@@ -551,6 +577,9 @@ class ElementDefinition {
         return $somethingHappened;
     }
 
+    public function evaluate($argValues) {
+        return null;
+    }
 }
 
 $T_AT = new TokenDefinition('@', 'AT');
@@ -599,16 +628,16 @@ function parse(array $tokInsts, array $elmDefs) {
     usort($elmDefs, function ($a, $b) { return $a->priority() - $b->priority(); });
     $root = new ElementInstance(null, $tokInsts);
     foreach ($elmDefs as $elmDef) {
-        $root->recursiveExpand($elmDef);
+        $root->expand($elmDef);
     }
-    if (!$root->isFullyExpanded()) {
-        throw new StrayTokenException($root->recursiveFindUnexpandedToken());
+    if (!$root->isExpanded()) {
+        throw new StrayTokenException($root->findUnexpandedToken());
     }
     return $root;
 }
 
 $text = 'usr1 ||(!usr2&&@group || !usr3)';
 echo 'Parsing "' . $text . '".' . "\n";
-parse(tokenize($text, $ALL_TOKENS, $IGNORE_TOKENS), $ALL_ELEMENTS)->recursivePrint();
+parse(tokenize($text, $ALL_TOKENS, $IGNORE_TOKENS), $ALL_ELEMENTS)->print();
 
 ?>
