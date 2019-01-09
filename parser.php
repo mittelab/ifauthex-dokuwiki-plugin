@@ -134,20 +134,23 @@ class ElementInstance {
         }
     }
 
-    public function printTree($indent=0) {
+    public function printTree($indentStr='', $isLastChild=false) {
         static $stack_depth = 0; global $STACK_LIMIT;
         if (++$stack_depth > $STACK_LIMIT) {
             throw new RuntimeException('Stack limit exceeded.');
         }
         try {
             if ($this->definition() !== null) {
-                echo str_repeat('  ', $indent) . $this->definition()->name() . "\n";
+                echo $indentStr . '+-' . $this->definition()->name() . "\n";
             }
+            $extraIndentStr = ($isLastChild ? '  ' : '| ');
+            $argIdx = 0;
             foreach ($this->args() as $arg) {
+                ++$argIdx;
                 if ($arg instanceof TokenInstance) {
-                    echo str_repeat('  ', $indent + 1) . $arg;
+                    echo $indentStr . $extraIndentStr . '+-' . $arg;
                 } else {
-                    $arg->printTree($indent + 1);
+                    $arg->printTree($indentStr . $extraIndentStr, $argIdx == count($this->args()));
                 }
             }
         } finally {
