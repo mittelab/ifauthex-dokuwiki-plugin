@@ -91,6 +91,38 @@ class UnknownTokenException extends \Exception {
     }
 }
 
+
+
+class MalformedExpressionException extends \Exception {
+    private $_elementInstance = null;
+
+    public function __construct($elementInstance, $message, $code = 0, Exception $previous = null) {
+        $this->_elementInstance = $elementInstance;
+        parent::__construct($message, $code, $previous);
+    }
+
+    public function getElementInstance() { return $this->_elementInstance; }
+
+    public function __toString() {
+        return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
+    }
+}
+
+class InvalidExpressionException extends \Exception  {
+    private $_elementInstance = null;
+
+    public function __construct($elementInstance, $message, $code = 0, Exception $previous = null) {
+        $this->_elementInstance = $elementInstance;
+        parent::__construct($message, $code, $previous);
+    }
+
+    public function getElementInstance() { return $this->_elementInstance; }
+
+    public function __toString() {
+        return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
+    }
+}
+
 class NotEnoughArgumentsException extends \Exception {
     private $_elementDefinition = null;
     private $_firstTokenInstance = null;
@@ -176,6 +208,18 @@ class ElementInstance {
     public function definition() { return $this->_definition; }
     public function args() { return $this->_args; }
 
+    public function getStringValue() {
+        $pieces = array();
+        foreach ($this->args() as $arg) {
+            if ($arg instanceof ElementInstance) {
+                $pieces[] = $arg->getStringValue();
+            } else {
+                $pieces[] = $arg->match();
+            }
+        }
+        return implode('', $pieces);
+    }
+
     public function isExpanded($recursive=true) {
         if ($this->definition() !== null && $this->definition()->fixing() == Fixing::None) {
             return true;
@@ -232,31 +276,45 @@ class ElementInstance {
         }
     }
 
-    public function evaluate() {
-        if (!$this->isExpanded()) {
-            throw new RuntimeException('An expression that is not fully expanded cannot be evaluated.');
+    public function evaluateArgs() {
+        $values = array();
+        foreach ($this->args() as $arg) {
+            if ($arg instanceof ElementInstance) {
+                $values[] = $arg->evaluate();
+            } else {
+                $values[] = $arg;
+            }
         }
+        return $values;
+    }
+
+    public function ensureWellFormed($recursive=true) {
         if ($this->definition() === null) {
-            switch (count($this->args())) {
-                case 0:
-                    return null;
-                    break;
-                case 1:
-                    return $this->args()[0]->evaluate();
-                default:
-                    throw new InvalidArgumentException('An expression that has more than a single root is not well defined.');
-                    break;
+            if (count($this->args()) > 1) {
+                throw new MalformedExpressionException($this, 'An expression that has more than a single root is not well defined.');
             }
         } else {
-            $values = array();
+            $this->definition()->ensureWellFormed($this);
+        }
+        if ($recursive) {
             foreach ($this->args() as $arg) {
                 if ($arg instanceof ElementInstance) {
-                    $values[] = $arg->evaluate();
-                } else {
-                    $values[] = $arg;
+                    $arg->ensureWellFormed($recursive);
                 }
             }
-            return $this->definition()->evaluate($values);
+        }
+    }
+
+    public function evaluate() {
+        if ($this->definition() === null) {
+            $this->ensureWellFormed(false);
+            // The expression is guaranteed to have 0 or 1 arguments because it's well formed.
+            if (count($this->args()) == 0) {
+                return null;
+            }
+            return $this->evaluateArgs()[0];
+        } else {
+            return $this->definition()->evaluate($this);
         }
     }
 }
@@ -581,8 +639,45 @@ class ElementDefinition {
         return $somethingHappened;
     }
 
-    public function evaluate($argValues) {
+    public function _evaluateWellFormed($elmInstance) {
         return null;
+    }
+
+    public function evaluate($elmInstance) {
+        $this->ensureWellFormed($elmInstance);
+        return $this->_evaluateWellFormed($elmInstance);
+    }
+
+    public function ensureWellFormed($elmInstance) {
+        if ($elmInstance->definition() != $this) {
+            throw new LogicException('This instance is not an instance of the given definition.');
+        }
+        $args = $elmInstance->args();
+        // Check arity
+        switch ($this->fixing()) {
+            case Fixing::None:
+                if (count($args) != 1) {
+                    throw new MalformedExpressionException($elmInstance, 'Expected exactly one token.');
+                } else if (!($args[0] instanceof TokenInstance)) {
+                    throw new MalformedExpressionException($elmInstance, 'Expected a token instance.');
+                } else if ($args[0]->definition() != $this->tokenDefs()[0]) {
+                    throw new MalformedExpressionException($elmInstance, 'Expected a token of type ' . $this->tokenDefs()[0]->name());
+                }
+                break;
+            case Fixing::Prefix:
+            case Fixing::Postfix:
+            case Fixing::Infix:
+                if ($this->arity() < 0) { // Any number of tokens, > 0
+                    if (count($args) < 1 && $this->fixing() == Fixing::Infix) {
+                        throw new MalformedExpressionException($elmInstance, 'Expected at least two arguments.');
+                    } elseif (count($args) == 0) {
+                        throw new MalformedExpressionException($elmInstance, 'Expected at least one argument.');
+                    }
+                } elseif (count($args) != $this->arity()) {
+                    throw new MalformedExpressionException($elmInstance, 'Expected exactly ' . $this->arity() . ' arguments.');
+                }
+                break;
+        }
     }
 }
 
@@ -625,14 +720,12 @@ class Literal extends ElementDefinition {
         $T_LITERAL = new TokenDefinition(null, 'LIT', '/\w+/');
         parent::__construct('Literal', Fixing::None, $T_LITERAL, 0);
     }
-    public function evaluate($argValues) {
-        if (count($argValues) != 1
-            || !($argValues[0] instanceof TokenInstance)
-            || $argValues[0]->definition() != $this->tokenDefs()[0]
-        ) {
-            throw new InvalidArgumentException();
+    public function _evaluateWellFormed($elmInstance) {
+        $key = 'REMOTE_USER';
+        if (array_key_exists($key, $_SERVER)) {
+            return $_SERVER[$key] == $elmInstance->getStringValue();
         }
-        return $argValues[0]->match();
+        return false;
     }
 }
 
@@ -642,13 +735,14 @@ class SubExpr extends ElementDefinition {
         $T_CLOSE_PAREN = new TokenDefinition(')', 'CLOSEP');
         parent::__construct('SubExpr', Fixing::Wrap, array($T_OPEN_PAREN, $T_CLOSE_PAREN), 1, null, true);
     }
-    public function evaluate($argValues) {
-        if (count($argValues) != 1
-            || !is_bool($argValues[0])
-        ) {
-            throw new InvalidArgumentException();
+    public function ensureWellFormed($elmInstance) {
+        parent::ensureWellFormed($elmInstance);
+        if (count($elmInstance->args()) != 1) {
+            throw new MalformedExpressionException($elmInstance, 'A subexpression must have exactly one root');
         }
-        return $argValues[0];
+    }
+    public function _evaluateWellFormed($elmInstance) {
+        return $elmInstance->evaluateArgs();
     }
 }
 
@@ -657,16 +751,23 @@ class OpInGroup extends ElementDefinition {
         $T_AT = new TokenDefinition('@', 'AT');
         parent::__construct('InGroup', Fixing::Prefix, $T_AT, 2);
     }
-    public function evaluate($argValues) {
-        if (count($argValues) != 1
-            || !($argValues[0] instanceof string)
-        ) {
-            throw new InvalidArgumentException();
+    public function ensureWellFormed($elmInstance) {
+        parent::ensureWellFormed($elmInstance);
+        if (!($elmInstance->args()[0]->definition() instanceof Literal)) {
+            throw new MalformedExpressionException($elmInstance, 'A in-group operator <@> must take exactly one literal argument.');
         }
+    }
+    public function _evaluateWellFormed($elmInstance) {
+        $groupName = $elmInstance->args()[0]->getStringValue();
         global $INFO;
-        if (is_array($INFO['userinfo'])) {
-            return in_array($argValues[0], $INFO['userinfo']['grps']);
+        $key1 = 'userinfo';
+        $key2 = 'grps';
+        if (is_array($INFO) && array_key_exists($key1, $INFO)) {
+            if (is_array($INFO[$key1]) && array_key_exists($key2, $INFO[$key1])) {
+                return in_array($groupName, $INFO[$key1][$key2]);
+            }
         }
+        return false;
     }
 }
 
@@ -675,12 +776,10 @@ class OpNot extends ElementDefinition {
         $T_EXCL = new TokenDefinition('!', 'EXCL');
         parent::__construct('Not', Fixing::Prefix, $T_EXCL, 3);
     }
-    public function evaluate($argValues) {
-        var_dump($argValues);
-        if (count($argValues) != 1
-            || !is_bool($argValues[0])
-        ) {
-            throw new InvalidArgumentException();
+    public function _evaluateWellFormed($elmInstance) {
+        $argValues = $elmInstance->evaluateArgs();
+        if (!is_bool($argValues[0])) {
+            throw new InvalidExpressionException($elmInstance, 'Not called on a non-boolean argument.');
         }
         return !$argValues[0];
     }
@@ -691,13 +790,11 @@ class OpAnd extends ElementDefinition {
         $T_AND = new TokenDefinition('&&', 'AND');
         parent::__construct('And', Fixing::Infix, $T_AND, 4);
     }
-    public function evaluate($argValues) {
-        if (count($argValues) == 0) {
-            throw new InvalidArgumentException();
-        }
+    public function _evaluateWellFormed($elmInstance) {
+        $argValues = $elmInstance->evaluateArgs();
         foreach ($argValues as $arg) {
             if (!is_bool($arg)) {
-                throw new InvalidArgumentException();
+                throw new InvalidExpressionException($elmInstance, 'And called on non-boolean arguments.');
             }
             if (!$arg) {
                 return false;
@@ -712,13 +809,11 @@ class OpOr extends ElementDefinition {
         $T_OR = new TokenDefinition('||', 'OR');
         parent::__construct('Or', Fixing::Infix, $T_OR, 5);
     }
-    public function evaluate($argValues) {
-        if (count($argValues) == 0) {
-            throw new InvalidArgumentException();
-        }
+    public function _evaluateWellFormed($elmInstance) {
+        $argValues = $elmInstance->evaluateArgs();
         foreach ($argValues as $arg) {
             if (!is_bool($arg)) {
-                throw new InvalidArgumentException();
+                throw new InvalidExpressionException($elmInstance, 'Or called on non-boolean arguments.');
             }
             if (!$arg) {
                 return false;
