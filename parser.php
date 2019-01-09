@@ -1,194 +1,14 @@
 <?php
 
 namespace AST;
-use \Exception;
 use \InvalidArgumentException;
 use \LogicException;
 use \RuntimeException;
 
+require_once "tokenizer.php";
+require_once "exceptions.php";
+
 $STACK_LIMIT = 50;
-
-class TokenDefinition {
-    private $_representation = null;
-    private $_name = null;
-    private $_matchRegex = null;
-
-    public function __construct($representation, $name=null, $matchRegex=null) {
-        $this->_representation = $representation;
-        if ($name === null) {
-            $name = $representation;
-        }
-        $this->_name = $name;
-        if ($matchRegex === null) {
-            $matchRegex = '/' . preg_quote($representation) . '/';
-        }
-        $this->_matchRegex = $matchRegex;
-    }
-
-    public function representation() { return $this->_representation;     }
-    public function name() { return $this->_name; }
-
-    public function tryMatch($text, $position) {
-        $matches = null;
-        $result = preg_match($this->_matchRegex, $text, $matches, PREG_OFFSET_CAPTURE, $position);
-        if ($result === 0) {
-            return null;
-        } elseif ($result === false) {
-            throw new InvalidArgumentException('An error occurred in preg_match.');
-        } elseif (count($matches) == 0) {
-            throw new RuntimeException('No matches?');
-        }
-        list($matchTxt, $matchOfs) = $matches[0];
-        if ($matchOfs > $position) {
-            return null;
-        }
-        return $matchTxt;
-    }
-    public function __toString() {
-        return '<' . $this->name() . ">\n";
-    }
-}
-
-class TokenInstance {
-    private $_definition = null;
-    private $_text = null;
-    private $_position = null;
-    private $_length = null;
-
-    public function __construct($definition, $text, $position, $length) {
-        $this->_definition = $definition;
-        $this->_text = $text;
-        $this->_position = $position;
-        $this->_length = $length;
-    }
-
-    public function definition() { return $this->_definition; }
-    public function text() { return $this->_text; }
-    public function position() { return $this->_position; }
-    public function length() { return $this->_length; }
-    public function match() { return substr($this->_text, $this->position(), $this->length()); }
-
-    public function __toString() {
-        return '<' . $this->definition()->name() . ':' . $this->match() . ">\n";
-    }
-}
-
-
-class UnknownTokenException extends \Exception {
-    private $_text = null;
-    private $_position = null;
-
-    public function __construct($text, $position, $code = 0, Exception $previous = null) {
-        $this->_text = $text;
-        $this->_position = $position;
-        $message = 'Unknown token "' . substr($text, $position, 4) . '" at position ' . $position;
-        parent::__construct($message, $code, $previous);
-    }
-
-    public function getText() { return $this->_text; }
-    public function getPosition() { return $this->_position; }
-
-    public function __toString() {
-        return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
-    }
-}
-
-
-
-class MalformedExpressionException extends \Exception {
-    private $_elementInstance = null;
-
-    public function __construct($elementInstance, $message, $code = 0, Exception $previous = null) {
-        $this->_elementInstance = $elementInstance;
-        parent::__construct($message, $code, $previous);
-    }
-
-    public function getElementInstance() { return $this->_elementInstance; }
-
-    public function __toString() {
-        return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
-    }
-}
-
-class InvalidExpressionException extends \Exception  {
-    private $_elementInstance = null;
-
-    public function __construct($elementInstance, $message, $code = 0, Exception $previous = null) {
-        $this->_elementInstance = $elementInstance;
-        parent::__construct($message, $code, $previous);
-    }
-
-    public function getElementInstance() { return $this->_elementInstance; }
-
-    public function __toString() {
-        return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
-    }
-}
-
-class NotEnoughArgumentsException extends \Exception {
-    private $_elementDefinition = null;
-    private $_firstTokenInstance = null;
-
-    public function __construct($elementDefinition, $firstTokenInstance, $code = 0, Exception $previous = null) {
-        $this->_elementDefinition = $elementDefinition;
-        $this->_firstTokenInstance = $firstTokenInstance;
-        $message = 'Not enough arguments for operator ' . $elementDefinition->name()
-            . ' encountered at position ' . $firstTokenInstance->position() . ', around "'
-            . substr($firstTokenInstance->text(), max(0, $firstTokenInstance->position() - 3), $firstTokenInstance->length() + 3)
-            . '".';
-        if ($elementDefinition->arity() > 0) {
-            $message .= ' Expected ' . $elementDefinition->arity() . ' arguments.';
-        }
-        parent::__construct($message, $code, $previous);
-    }
-
-    public function getFirstTokenInstance() { return $this->_firstTokenInstance; }
-    public function getElementDefinition() { return $this->_elementDefinition; }
-
-    public function __toString() {
-        return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
-    }
-}
-
-class StrayTokenException extends \Exception {
-    private $_tokenInstance = null;
-
-    public function __construct($tokenInstance, $code = 0, Exception $previous = null) {
-        $this->_tokenInstance = $tokenInstance;
-        $message = 'Stray token encountered at position ' . $tokenInstance->position() . ', around "'
-            . substr($tokenInstance->text(), max(0, $tokenInstance->position() - 3), $tokenInstance->length() + 3)
-            . '".';
-        parent::__construct($message, $code, $previous);
-    }
-
-    public function getTokenInstance() { return $this->_tokenInstance; }
-
-    public function __toString() {
-        return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
-    }
-}
-
-class UnmatchedWrapperException extends \Exception {
-    private $_elementDefinition = null;
-    private $_firstTokenInstance = null;
-
-    public function __construct($elementDefinition, $firstTokenInstance, $code = 0, Exception $previous = null) {
-        $this->_elementDefinition = $elementDefinition;
-        $this->_firstTokenInstance = $firstTokenInstance;
-        $message = 'Unmatched opening token ' . $elementDefinition->tokenDefs()[0] . ' for wrapping operator '
-            . $elementDefinition->name() . ' encountered at position ' . $firstTokenInstance->position() . ', around "'
-            . substr($firstTokenInstance->text(), max(0, $firstTokenInstance->position() - 3), $firstTokenInstance->length() + 3)
-            . '". The missing closing token is ' . $elementDefinition->tokenDefs()[1] . '.';
-        parent::__construct($message, $code, $previous);
-    }
-
-    public function getFirstTokenInstance() { return $this->_firstTokenInstance; }
-    public function getElementDefinition() { return $this->_elementDefinition; }
-
-    public function __toString() {
-        return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
-    }
-}
 
 abstract class Fixing {
     const None = 0;
@@ -289,7 +109,7 @@ class ElementInstance {
         }
     }
 
-    public function print($indent=0) {
+    public function printTree($indent=0) {
         static $stack_depth = 0; global $STACK_LIMIT;
         if (++$stack_depth > $STACK_LIMIT) {
             throw new RuntimeException('Stack limit exceeded.');
@@ -302,7 +122,7 @@ class ElementInstance {
                 if ($arg instanceof TokenInstance) {
                     echo str_repeat('  ', $indent + 1) . $arg;
                 } else {
-                    $arg->print($indent + 1);
+                    $arg->printTree($indent + 1);
                 }
             }
         } finally {
@@ -698,6 +518,14 @@ class ElementDefinition {
         return $this->_evaluateWellFormed($elmInstance);
     }
 
+    static public function extractUsedTokens($elmDefs) {
+        $retval = array();
+        foreach ($elmDefs as $elmDef) {
+            $retval = array_merge($retval, $elmDef->tokenDefs());
+        }
+        return $retval;
+    }
+
     public function ensureWellFormed($elmInstance) {
         if ($elmInstance->definition() != $this) {
             throw new LogicException('This instance is not an instance of the given definition.');
@@ -731,27 +559,6 @@ class ElementDefinition {
     }
 }
 
-function tokenize(string $text, array $tokDefs, array $stripTokDefs) {
-    $tokInsts = array();
-    $foundTokInst = null;
-    for ($position = 0; $position < strlen($text); $position += $foundTokInst->length()) {
-        $foundTokInst = null;
-        foreach ($tokDefs as $tokDef) {
-            $match = $tokDef->tryMatch($text, $position);
-            if ($match !== null) {
-                $foundTokInst = new TokenInstance($tokDef, $text, $position, strlen($match));
-                break;
-            }
-        }
-        if ($foundTokInst === null) {
-            throw new UnknownTokenException($text, $position);
-        } elseif (!in_array($foundTokInst->definition(), $stripTokDefs)) {
-            $tokInsts[] = $foundTokInst;
-        }
-    }
-    return $tokInsts;
-}
-
 function parse(array $tokInsts, array $elmDefs) {
     usort($elmDefs, function ($a, $b) { return $a->priority() - $b->priority(); });
     $root = new ElementInstance(null, $tokInsts);
@@ -763,136 +570,5 @@ function parse(array $tokInsts, array $elmDefs) {
     }
     return $root;
 }
-
-
-class Literal extends ElementDefinition {
-    public function __construct() {
-        $T_LITERAL = new TokenDefinition(null, 'LIT', '/\w+/');
-        parent::__construct('Literal', Fixing::None, $T_LITERAL, 0);
-    }
-    public function _evaluateWellFormed($elmInstance) {
-        $key = 'REMOTE_USER';
-        if (array_key_exists($key, $_SERVER)) {
-            return $_SERVER[$key] == $elmInstance->getStringValue();
-        }
-        return false;
-    }
-}
-
-class SubExpr extends ElementDefinition {
-    public function __construct() {
-        $T_OPEN_PAREN = new TokenDefinition('(', 'OPENP');
-        $T_CLOSE_PAREN = new TokenDefinition(')', 'CLOSEP');
-        parent::__construct('SubExpr', Fixing::Wrap, array($T_OPEN_PAREN, $T_CLOSE_PAREN), 1, null, true);
-    }
-    public function ensureWellFormed($elmInstance) {
-        parent::ensureWellFormed($elmInstance);
-        if (count($elmInstance->args()) != 1) {
-            throw new MalformedExpressionException($elmInstance, 'A subexpression must have exactly one root');
-        }
-    }
-    public function _evaluateWellFormed($elmInstance) {
-        return $elmInstance->evaluateArgs();
-    }
-}
-
-class OpInGroup extends ElementDefinition {
-    public function __construct() {
-        $T_AT = new TokenDefinition('@', 'AT');
-        parent::__construct('InGroup', Fixing::Prefix, $T_AT, 2);
-    }
-    public function ensureWellFormed($elmInstance) {
-        parent::ensureWellFormed($elmInstance);
-        if (!($elmInstance->args()[0]->definition() instanceof Literal)) {
-            throw new MalformedExpressionException($elmInstance, 'A in-group operator <@> must take exactly one literal argument.');
-        }
-    }
-    public function _evaluateWellFormed($elmInstance) {
-        $groupName = $elmInstance->args()[0]->getStringValue();
-        global $INFO;
-        $key1 = 'userinfo';
-        $key2 = 'grps';
-        if (is_array($INFO) && array_key_exists($key1, $INFO)) {
-            if (is_array($INFO[$key1]) && array_key_exists($key2, $INFO[$key1])) {
-                return in_array($groupName, $INFO[$key1][$key2]);
-            }
-        }
-        return false;
-    }
-}
-
-class OpNot extends ElementDefinition {
-    public function __construct() {
-        $T_EXCL = new TokenDefinition('!', 'EXCL');
-        parent::__construct('Not', Fixing::Prefix, $T_EXCL, 3);
-    }
-    public function _evaluateWellFormed($elmInstance) {
-        $argValues = $elmInstance->evaluateArgs();
-        if (!is_bool($argValues[0])) {
-            throw new InvalidExpressionException($elmInstance, 'Not called on a non-boolean argument.');
-        }
-        return !$argValues[0];
-    }
-}
-
-class OpAnd extends ElementDefinition {
-    public function __construct() {
-        $T_AND = new TokenDefinition('&&', 'AND');
-        parent::__construct('And', Fixing::Infix, $T_AND, 4);
-    }
-    public function _evaluateWellFormed($elmInstance) {
-        $argValues = $elmInstance->evaluateArgs();
-        foreach ($argValues as $arg) {
-            if (!is_bool($arg)) {
-                throw new InvalidExpressionException($elmInstance, 'And called on non-boolean arguments.');
-            }
-            if (!$arg) {
-                return false;
-            }
-        }
-        return true;
-    }
-}
-
-class OpOr extends ElementDefinition {
-    public function __construct() {
-        $T_OR = new TokenDefinition('||', 'OR');
-        parent::__construct('Or', Fixing::Infix, $T_OR, 5);
-    }
-    public function _evaluateWellFormed($elmInstance) {
-        $argValues = $elmInstance->evaluateArgs();
-        foreach ($argValues as $arg) {
-            if (!is_bool($arg)) {
-                throw new InvalidExpressionException($elmInstance, 'Or called on non-boolean arguments.');
-            }
-            if (!$arg) {
-                return false;
-            }
-        }
-        return true;
-    }
-}
-
-$ALL_ELEMENTS = array(
-    new Literal(),
-    new SubExpr(),
-    new OpInGroup(),
-    new OpNot(),
-    new OpAnd(),
-    new OpOr()
-);
-
-$IGNORE_TOKENS = array(new TokenDefinition(' ', 'SPC', '/\s+/'));
-$ALL_TOKENS = array_merge($IGNORE_TOKENS);
-foreach ($ALL_ELEMENTS as $ELM) {
-    $ALL_TOKENS = array_merge($ALL_TOKENS, $ELM->tokenDefs());
-}
-
-
-$text = 'usr1 ||(!usr2&&@group || !usr3)';
-echo 'Parsing "' . $text . '".' . "\n";
-$expr = parse(tokenize($text, $ALL_TOKENS, $IGNORE_TOKENS), $ALL_ELEMENTS);
-$expr->print();
-var_dump($expr->evaluate());
 
 ?>
