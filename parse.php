@@ -6,6 +6,8 @@ use \InvalidArgumentException;
 use \LogicException;
 use \RuntimeException;
 
+$STACK_LIMIT = 50;
+
 class TokenDefinition {
     private $_representation = null;
     private $_name = null;
@@ -221,58 +223,90 @@ class ElementInstance {
     }
 
     public function isExpanded($recursive=true) {
-        if ($this->definition() !== null && $this->definition()->fixing() == Fixing::None) {
-            return true;
+        static $stack_depth = 0; global $STACK_LIMIT;
+        if (++$stack_depth > $STACK_LIMIT) {
+            throw new RuntimeException('Stack limit exceeded.');
         }
-        foreach ($this->args() as $arg) {
-            if ($arg instanceof TokenInstance || ($recursive && !$arg->isExpanded($recursive))) {
-                return false;
+        try {
+            if ($this->definition() !== null && $this->definition()->fixing() == Fixing::None) {
+                return true;
             }
+            foreach ($this->args() as $arg) {
+                if ($arg instanceof TokenInstance || ($recursive && !$arg->isExpanded($recursive))) {
+                    return false;
+                }
+            }
+        } finally {
+            --$stack_depth;
         }
         return true;
     }
 
     public function expand($elmDef, $recursive=true) {
-        if ($this->isExpanded($recursive)) {
-            return;
+        static $stack_depth = 0; global $STACK_LIMIT;
+        if (++$stack_depth > $STACK_LIMIT) {
+            throw new RuntimeException('Stack limit exceeded.');
         }
-        $elmDef->spliceInstancesIn($this->_args);
-        if ($recursive) {
-            foreach ($this->args() as $arg) {
-                if ($arg instanceof ElementInstance && !$arg->isExpanded($recursive)) {
-                    $arg->expand($elmDef);
+        try {
+            if ($this->isExpanded($recursive)) {
+                return;
+            }
+            $elmDef->spliceInstancesIn($this->_args);
+            if ($recursive) {
+                foreach ($this->args() as $arg) {
+                    if ($arg instanceof ElementInstance && !$arg->isExpanded($recursive)) {
+                        $arg->expand($elmDef);
+                    }
                 }
             }
+        } finally {
+            --$stack_depth;
         }
     }
 
     public function findUnexpandedToken($recursive=true) {
-        if ($this->isExpanded($recursive)) {
-            return null;
+        static $stack_depth = 0; global $STACK_LIMIT;
+        if (++$stack_depth > $STACK_LIMIT) {
+            throw new RuntimeException('Stack limit exceeded.');
         }
-        foreach ($this->args() as $arg) {
-            if ($arg instanceof TokenInstance) {
-                return $arg;
-            } elseif ($recursive) {
-                $tok = $arg->findUnexpandedToken($recursive);
-                if ($tok !== null) {
-                    return $tok;
+        try {
+            if ($this->isExpanded($recursive)) {
+                return null;
+            }
+            foreach ($this->args() as $arg) {
+                if ($arg instanceof TokenInstance) {
+                    return $arg;
+                } elseif ($recursive) {
+                    $tok = $arg->findUnexpandedToken($recursive);
+                    if ($tok !== null) {
+                        return $tok;
+                    }
                 }
             }
+            throw LogicException('A fully expanded element instance has no stray token!');
+        } finally {
+            --$stack_depth;
         }
-        throw LogicException('A fully expanded element instance has no stray token!');
     }
 
     public function print($indent=0) {
-        if ($this->definition() !== null) {
-            echo str_repeat('  ', $indent) . $this->definition()->name() . "\n";
+        static $stack_depth = 0; global $STACK_LIMIT;
+        if (++$stack_depth > $STACK_LIMIT) {
+            throw new RuntimeException('Stack limit exceeded.');
         }
-        foreach ($this->args() as $arg) {
-            if ($arg instanceof TokenInstance) {
-                echo str_repeat('  ', $indent + 1) . $arg;
-            } else {
-                $arg->print($indent + 1);
+        try {
+            if ($this->definition() !== null) {
+                echo str_repeat('  ', $indent) . $this->definition()->name() . "\n";
             }
+            foreach ($this->args() as $arg) {
+                if ($arg instanceof TokenInstance) {
+                    echo str_repeat('  ', $indent + 1) . $arg;
+                } else {
+                    $arg->print($indent + 1);
+                }
+            }
+        } finally {
+            --$stack_depth;
         }
     }
 
@@ -289,32 +323,48 @@ class ElementInstance {
     }
 
     public function ensureWellFormed($recursive=true) {
-        if ($this->definition() === null) {
-            if (count($this->args()) > 1) {
-                throw new MalformedExpressionException($this, 'An expression that has more than a single root is not well defined.');
-            }
-        } else {
-            $this->definition()->ensureWellFormed($this);
+        static $stack_depth = 0; global $STACK_LIMIT;
+        if (++$stack_depth > $STACK_LIMIT) {
+            throw new RuntimeException('Stack limit exceeded.');
         }
-        if ($recursive) {
-            foreach ($this->args() as $arg) {
-                if ($arg instanceof ElementInstance) {
-                    $arg->ensureWellFormed($recursive);
+        try {
+            if ($this->definition() === null) {
+                if (count($this->args()) > 1) {
+                    throw new MalformedExpressionException($this, 'An expression that has more than a single root is not well defined.');
+                }
+            } else {
+                $this->definition()->ensureWellFormed($this);
+            }
+            if ($recursive) {
+                foreach ($this->args() as $arg) {
+                    if ($arg instanceof ElementInstance) {
+                        $arg->ensureWellFormed($recursive);
+                    }
                 }
             }
+        } finally {
+            --$stack_depth;
         }
     }
 
     public function evaluate() {
-        if ($this->definition() === null) {
-            $this->ensureWellFormed(false);
-            // The expression is guaranteed to have 0 or 1 arguments because it's well formed.
-            if (count($this->args()) == 0) {
-                return null;
+        static $stack_depth = 0; global $STACK_LIMIT;
+        if (++$stack_depth > $STACK_LIMIT) {
+            throw new RuntimeException('Stack limit exceeded.');
+        }
+        try {
+            if ($this->definition() === null) {
+                $this->ensureWellFormed(false);
+                // The expression is guaranteed to have 0 or 1 arguments because it's well formed.
+                if (count($this->args()) == 0) {
+                    return null;
+                }
+                return $this->evaluateArgs()[0];
+            } else {
+                return $this->definition()->evaluate($this);
             }
-            return $this->evaluateArgs()[0];
-        } else {
-            return $this->definition()->evaluate($this);
+        } finally {
+            --$stack_depth;
         }
     }
 }
