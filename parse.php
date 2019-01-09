@@ -250,7 +250,11 @@ class ElementInstance {
         } else {
             $values = array();
             foreach ($this->args() as $arg) {
-                $values[] = $arg->evaluate();
+                if ($arg instanceof ElementInstance) {
+                    $values[] = $arg->evaluate();
+                } else {
+                    $values[] = $arg;
+                }
             }
             return $this->definition()->evaluate($values);
         }
@@ -582,27 +586,6 @@ class ElementDefinition {
     }
 }
 
-$T_AT = new TokenDefinition('@', 'AT');
-$T_EXCL = new TokenDefinition('!', 'EXCL');
-$T_AND = new TokenDefinition('&&', 'AND');
-$T_OR = new TokenDefinition('||', 'OR');
-$T_OPEN_PAREN = new TokenDefinition('(', 'OPENP');
-$T_CLOSE_PAREN = new TokenDefinition(')', 'CLOSEP');
-$T_LITERAL = new TokenDefinition(null, 'LIT', '/\w+/');
-$T_SPACE = new TokenDefinition(' ', 'SPC', '/\s+/');
-
-$ALL_TOKENS = array($T_AT, $T_EXCL, $T_AND, $T_OR, $T_OPEN_PAREN, $T_CLOSE_PAREN, $T_LITERAL, $T_SPACE);
-$IGNORE_TOKENS = array($T_SPACE);
-
-$ELM_LITERAL = new ElementDefinition('Literal', Fixing::None, $T_LITERAL, 0);
-$ELM_SUBEXPR = new ElementDefinition('Subexpr', Fixing::Wrap, array($T_OPEN_PAREN, $T_CLOSE_PAREN), 1, null, true);
-$ELM_GROUP = new ElementDefinition('InGroup', Fixing::Prefix, $T_AT, 2);
-$ELM_NEG = new ElementDefinition('Not', Fixing::Prefix, $T_EXCL, 3);
-$ELM_AND = new ElementDefinition('And', Fixing::Infix, $T_AND, 4);
-$ELM_OR = new ElementDefinition('Or', Fixing::Infix, $T_OR, 5);
-
-$ALL_ELEMENTS = array($ELM_LITERAL, $ELM_SUBEXPR, $ELM_GROUP, $ELM_NEG, $ELM_AND, $ELM_OR);
-
 function tokenize(string $text, array $tokDefs, array $stripTokDefs) {
     $tokInsts = array();
     $foundTokInst = null;
@@ -636,8 +619,135 @@ function parse(array $tokInsts, array $elmDefs) {
     return $root;
 }
 
+
+class Literal extends ElementDefinition {
+    public function __construct() {
+        $T_LITERAL = new TokenDefinition(null, 'LIT', '/\w+/');
+        parent::__construct('Literal', Fixing::None, $T_LITERAL, 0);
+    }
+    public function evaluate($argValues) {
+        if (count($argValues) != 1
+            || !($argValues[0] instanceof TokenInstance)
+            || $argValues[0]->definition() != $this->tokenDefs()[0]
+        ) {
+            throw new InvalidArgumentException();
+        }
+        return $argValues[0]->match();
+    }
+}
+
+class SubExpr extends ElementDefinition {
+    public function __construct() {
+        $T_OPEN_PAREN = new TokenDefinition('(', 'OPENP');
+        $T_CLOSE_PAREN = new TokenDefinition(')', 'CLOSEP');
+        parent::__construct('SubExpr', Fixing::Wrap, array($T_OPEN_PAREN, $T_CLOSE_PAREN), 1, null, true);
+    }
+    public function evaluate($argValues) {
+        if (count($argValues) != 1
+            || !is_bool($argValues[0])
+        ) {
+            throw new InvalidArgumentException();
+        }
+        return $argValues[0];
+    }
+}
+
+class OpInGroup extends ElementDefinition {
+    public function __construct() {
+        $T_AT = new TokenDefinition('@', 'AT');
+        parent::__construct('InGroup', Fixing::Prefix, $T_AT, 2);
+    }
+    public function evaluate($argValues) {
+        if (count($argValues) != 1
+            || !($argValues[0] instanceof string)
+        ) {
+            throw new InvalidArgumentException();
+        }
+        global $INFO;
+        if (is_array($INFO['userinfo'])) {
+            return in_array($argValues[0], $INFO['userinfo']['grps']);
+        }
+    }
+}
+
+class OpNot extends ElementDefinition {
+    public function __construct() {
+        $T_EXCL = new TokenDefinition('!', 'EXCL');
+        parent::__construct('Not', Fixing::Prefix, $T_EXCL, 3);
+    }
+    public function evaluate($argValues) {
+        var_dump($argValues);
+        if (count($argValues) != 1
+            || !is_bool($argValues[0])
+        ) {
+            throw new InvalidArgumentException();
+        }
+        return !$argValues[0];
+    }
+}
+
+class OpAnd extends ElementDefinition {
+    public function __construct() {
+        $T_AND = new TokenDefinition('&&', 'AND');
+        parent::__construct('And', Fixing::Infix, $T_AND, 4);
+    }
+    public function evaluate($argValues) {
+        if (count($argValues) == 0) {
+            throw new InvalidArgumentException();
+        }
+        foreach ($argValues as $arg) {
+            if (!is_bool($arg)) {
+                throw new InvalidArgumentException();
+            }
+            if (!$arg) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
+class OpOr extends ElementDefinition {
+    public function __construct() {
+        $T_OR = new TokenDefinition('||', 'OR');
+        parent::__construct('Or', Fixing::Infix, $T_OR, 5);
+    }
+    public function evaluate($argValues) {
+        if (count($argValues) == 0) {
+            throw new InvalidArgumentException();
+        }
+        foreach ($argValues as $arg) {
+            if (!is_bool($arg)) {
+                throw new InvalidArgumentException();
+            }
+            if (!$arg) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
+$ALL_ELEMENTS = array(
+    new Literal(),
+    new SubExpr(),
+    new OpInGroup(),
+    new OpNot(),
+    new OpAnd(),
+    new OpOr()
+);
+
+$IGNORE_TOKENS = array(new TokenDefinition(' ', 'SPC', '/\s+/'));
+$ALL_TOKENS = array_merge($IGNORE_TOKENS);
+foreach ($ALL_ELEMENTS as $ELM) {
+    $ALL_TOKENS = array_merge($ALL_TOKENS, $ELM->tokenDefs());
+}
+
+
 $text = 'usr1 ||(!usr2&&@group || !usr3)';
 echo 'Parsing "' . $text . '".' . "\n";
-parse(tokenize($text, $ALL_TOKENS, $IGNORE_TOKENS), $ALL_ELEMENTS)->print();
+$expr = parse(tokenize($text, $ALL_TOKENS, $IGNORE_TOKENS), $ALL_ELEMENTS);
+$expr->print();
+var_dump($expr->evaluate());
 
 ?>
