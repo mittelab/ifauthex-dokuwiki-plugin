@@ -42,6 +42,31 @@ class ElementInstance {
         return implode('', $pieces);
     }
 
+    public function getRepresentation() {
+        static $stack_depth = 0; global $STACK_LIMIT;
+        if (++$stack_depth > $STACK_LIMIT) {
+            throw new RuntimeException('Stack limit exceeded.');
+        }
+        try {
+            if ($this->definition() === null) {
+                $this->ensureWellFormed(false);
+                // The expression is guaranteed to have 0 or 1 arguments because it's well formed.
+                if (count($this->args()) == 0) {
+                    return '';
+                }
+                if ($this->args()[0] instanceof ElementInstance) {
+                    return $this->args()[0]->getRepresentation();
+                } else {
+                    return $this->args()[0]->match();
+                }
+            } else {
+                return $this->definition()->getRepresentation($this);
+            }
+        } finally {
+            --$stack_depth;
+        }
+    }
+
     public function isExpanded($recursive=true) {
         static $stack_depth = 0; global $STACK_LIMIT;
         if (++$stack_depth > $STACK_LIMIT) {
@@ -516,6 +541,47 @@ class ElementDefinition {
     public function evaluate($elmInstance) {
         $this->ensureWellFormed($elmInstance);
         return $this->_evaluateWellFormed($elmInstance);
+    }
+
+    public function getTokenDefRepr($idx) {
+        if ($idx < count($this->tokenDefs())) {
+            return $this->tokenDefs()[$idx]->representation();
+        } elseif (count($this->tokenDefs()) == 1) {
+            return $this->tokenDefs()[0]->representation();
+        }
+        return '';
+    }
+
+    public function getRepresentation($elmInstance) {
+        $this->ensureWellFormed($elmInstance);
+        $argsRepr = array();
+        foreach ($elmInstance->args() as $arg) {
+            if ($arg instanceof TokenInstance) {
+                $argsRepr[] = $arg->match();
+            } else {
+                $argsRepr[] = $arg->getRepresentation();
+            }
+        }
+        $pieces = array();
+        if ($this->fixing() == Fixing::Prefix || $this->fixing() == Fixing::Wrap) {
+            $pieces[] = $this->getTokenDefRepr(0);
+        }
+        $argIdx = ($this->fixing() == Fixing::Postfix || $this->fixing() == Fixing::Infix ? -1 : 0);
+        foreach ($argsRepr as $argRepr) {
+            $pieces[] = $argRepr;
+            ++$argIdx;
+            if ($this->fixing() == Fixing::None && $this->fixing() == Fixing::Wrap) {
+                continue;
+            }
+            if ($argIdx >= count($argsRepr) || ($this->fixing() == Fixing::Infix && $argIdx >= count($argsRepr) - 1)) {
+                continue;
+            }
+            $pieces[] = $this->getTokenDefRepr($argIdx);
+        }
+        if ($this->fixing() == Fixing::Wrap) {
+            $pieces[] = $this->getTokenDefRepr(1);
+        }
+        return implode('', $pieces);
     }
 
     static public function extractUsedTokens($elmDefs) {
