@@ -1,0 +1,7 @@
+base   ifauthex
+author Pietro Saccardi
+email  lizardm4@gmail.com
+date   2019-01-09
+name   ifauthex plugin
+desc   Toggles content depending on user and user groups.
+url    https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin
