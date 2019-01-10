@@ -148,7 +148,7 @@ class ElementInstance {
             foreach ($this->args() as $arg) {
                 ++$argIdx;
                 if ($arg instanceof TokenInstance) {
-                    echo $indentStr . $extraIndentStr . '+-' . $arg;
+                    echo $indentStr . $extraIndentStr . '+-' . $arg . "\n";
                 } else {
                     $arg->printTree($indentStr . $extraIndentStr, $argIdx == count($this->args()));
                 }

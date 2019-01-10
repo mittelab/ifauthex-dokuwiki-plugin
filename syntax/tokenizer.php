@@ -43,7 +43,7 @@ class TokenDefinition {
         return $matchTxt;
     }
     public function __toString() {
-        return '<' . $this->name() . ">\n";
+        return '<' . $this->name() . '>';
     }
 }
 
@@ -67,7 +67,7 @@ class TokenInstance {
     public function match() { return substr($this->_text, $this->position(), $this->length()); }
 
     public function __toString() {
-        return '<' . $this->definition()->name() . ':' . $this->match() . ">\n";
+        return '<' . $this->definition()->name() . ':' . $this->match() . '>';
     }
 }
 
