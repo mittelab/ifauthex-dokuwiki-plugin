@@ -8,7 +8,7 @@ use \RuntimeException;
 require_once "tokenizer.php";
 require_once "exceptions.php";
 
-$STACK_LIMIT = 50;
+$EXPR_DEPTH_LIMIT = 50;
 
 abstract class Fixing {
     const None = 0;
@@ -43,9 +43,9 @@ class ElementInstance {
     }
 
     public function getRepresentation() {
-        static $stack_depth = 0; global $STACK_LIMIT;
-        if (++$stack_depth > $STACK_LIMIT) {
-            throw new RuntimeException('Stack limit exceeded.');
+        static $stack_depth = 0; global $EXPR_DEPTH_LIMIT;
+        if (++$stack_depth > $EXPR_DEPTH_LIMIT) {
+            throw new RuntimeException('Depth limit exceeded.');
         }
         try {
             if ($this->definition() === null) {
@@ -68,9 +68,9 @@ class ElementInstance {
     }
 
     public function isExpanded($recursive=true) {
-        static $stack_depth = 0; global $STACK_LIMIT;
-        if (++$stack_depth > $STACK_LIMIT) {
-            throw new RuntimeException('Stack limit exceeded.');
+        static $stack_depth = 0; global $EXPR_DEPTH_LIMIT;
+        if (++$stack_depth > $EXPR_DEPTH_LIMIT) {
+            throw new RuntimeException('Depth limit exceeded.');
         }
         try {
             if ($this->definition() !== null && $this->definition()->fixing() == Fixing::None) {
@@ -88,9 +88,9 @@ class ElementInstance {
     }
 
     public function expand($elmDef, $recursive=true) {
-        static $stack_depth = 0; global $STACK_LIMIT;
-        if (++$stack_depth > $STACK_LIMIT) {
-            throw new RuntimeException('Stack limit exceeded.');
+        static $stack_depth = 0; global $EXPR_DEPTH_LIMIT;
+        if (++$stack_depth > $EXPR_DEPTH_LIMIT) {
+            throw new RuntimeException('Depth limit exceeded.');
         }
         try {
             if ($this->isExpanded($recursive)) {
@@ -110,9 +110,9 @@ class ElementInstance {
     }
 
     public function findUnexpandedToken($recursive=true) {
-        static $stack_depth = 0; global $STACK_LIMIT;
-        if (++$stack_depth > $STACK_LIMIT) {
-            throw new RuntimeException('Stack limit exceeded.');
+        static $stack_depth = 0; global $EXPR_DEPTH_LIMIT;
+        if (++$stack_depth > $EXPR_DEPTH_LIMIT) {
+            throw new RuntimeException('Depth limit exceeded.');
         }
         try {
             if ($this->isExpanded($recursive)) {
@@ -135,9 +135,9 @@ class ElementInstance {
     }
 
     public function printTree($indentStr='', $isLastChild=false) {
-        static $stack_depth = 0; global $STACK_LIMIT;
-        if (++$stack_depth > $STACK_LIMIT) {
-            throw new RuntimeException('Stack limit exceeded.');
+        static $stack_depth = 0; global $EXPR_DEPTH_LIMIT;
+        if (++$stack_depth > $EXPR_DEPTH_LIMIT) {
+            throw new RuntimeException('Depth limit exceeded.');
         }
         try {
             if ($this->definition() !== null) {
@@ -171,9 +171,9 @@ class ElementInstance {
     }
 
     public function ensureWellFormed($recursive=true) {
-        static $stack_depth = 0; global $STACK_LIMIT;
-        if (++$stack_depth > $STACK_LIMIT) {
-            throw new RuntimeException('Stack limit exceeded.');
+        static $stack_depth = 0; global $EXPR_DEPTH_LIMIT;
+        if (++$stack_depth > $EXPR_DEPTH_LIMIT) {
+            throw new RuntimeException('Depth limit exceeded.');
         }
         try {
             if ($this->definition() === null) {
@@ -196,9 +196,9 @@ class ElementInstance {
     }
 
     public function evaluate() {
-        static $stack_depth = 0; global $STACK_LIMIT;
-        if (++$stack_depth > $STACK_LIMIT) {
-            throw new RuntimeException('Stack limit exceeded.');
+        static $stack_depth = 0; global $EXPR_DEPTH_LIMIT;
+        if (++$stack_depth > $EXPR_DEPTH_LIMIT) {
+            throw new RuntimeException('Depth limit exceeded.');
         }
         try {
             if ($this->definition() === null) {
