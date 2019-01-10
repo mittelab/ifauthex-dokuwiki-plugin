@@ -1,6 +1,6 @@
 <?php
-require_once(__DIR__ . '/../syntax/grammar.php');
-require_once(__DIR__ . '/../syntax/exceptions.php');
+require_once(__DIR__ . '/../lib/grammar.php');
+require_once(__DIR__ . '/../lib/exceptions.php');
 
 /**
  * General tests for the ifauthex plugin

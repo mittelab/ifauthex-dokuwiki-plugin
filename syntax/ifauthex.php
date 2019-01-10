@@ -11,7 +11,7 @@ if (!defined('DOKU_INC')) {
     die();
 }
 
-require_once('grammar.php');
+require_once(__DIR__ . '/../lib/grammar.php');
 
 class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
 {
