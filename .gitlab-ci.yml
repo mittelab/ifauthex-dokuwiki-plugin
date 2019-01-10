@@ -1,0 +1,15 @@
+image: php
+
+before_script:
+- apt-get update -yqq
+- apt-get install -yqq git phpunit
+- docker-php-ext-install mbstring xml
+- git clone git://github.com/splitbrain/dokuwiki.git
+- pushd dokuwiki/lib/plugins
+- ln -s $CI_PROJECT_DIR $CI_PROJECT_NAME
+- popd
+
+test:
+  script:
+  - cd dokuwiki/_test
+  - phpunit --stderr --group plugin_ifauthex
