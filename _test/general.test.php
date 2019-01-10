@@ -1,4 +1,6 @@
 <?php
+require_once(__DIR__ . '/../syntax/grammar.php');
+
 /**
  * General tests for the ifauthex plugin
  *
@@ -64,6 +66,18 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         '(user || @group || user) && (@group || !@group && @group)',
         'user && user || @group'
     );
+
+    public function test_parse()
+    {
+        foreach (self::VALID_EXPRESSIONS as $expr) {
+            $failureMsg = 'Assertion failed at expression "' . $expr . '".';
+            $ast = null;
+            $rebuiltExpr = null;
+            $this->assertNotNull($ast = parse($expr));
+            $this->assertNotNull($rebuiltExpr = $ast->getRepresentation());
+            $this->assertEquals($rebuiltExpr, preg_replace('/\s/', '', $expr));
+        }
+    }
 
     /**
      * Simple test to make sure the plugin.info.txt is in correct format
