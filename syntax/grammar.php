@@ -101,7 +101,7 @@ class OpAnd extends ElementDefinition {
 
 class OpOr extends ElementDefinition {
     public function __construct() {
-        $T_OR = new TokenDefinition('||', 'OR');
+        $T_OR = new TokenDefinition('||', 'OR', '/(\|\||,)/');
         parent::__construct('Or', Fixing::Infix, $T_OR, 5);
     }
     public function _evaluateWellFormed($elmInstance) {
