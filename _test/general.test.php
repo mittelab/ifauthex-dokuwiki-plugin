@@ -1,5 +1,6 @@
 <?php
 require_once(__DIR__ . '/../syntax/grammar.php');
+require_once(__DIR__ . '/../syntax/exceptions.php');
 
 /**
  * General tests for the ifauthex plugin
@@ -67,6 +68,52 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         'user && user || @group'
     );
 
+    const UNKNOWN_TOKEN_EXPRESSIONS = array(
+        '!(!@group & !@group && !@group)',
+        '!(!@group && !user && @group) | !(@group || user || @group)',
+        '!(!@group && @group || !user] && (!user || user && @group)',
+        '!(!@group && user) && !^!@group || @group || user)',
+        '!(!@group || <inject> !user && !user) || !(user || @group || !@group)',
+        '!(!@group || @group -- !@group) && (@group || @group && !@group)',
+        '!(!@group || user || user) && !(!user || > !user || !user)',
+        '!(!user && !@group) <|| (!@group || !user && @group)',
+        '!(!user && @group && @group) / && (user || !@group || user)',
+        '!(!user && user || : !user) && !(@group || !@group && user)'
+    );
+
+    const STRAY_TOKEN_EXPRESSIONS = array(
+        'usr usr2',
+        'user && @group) && (!user || !user || !@group)',
+        // Closed brackets alone are unmatched:
+        '@group && (usr) @another',
+        '(user || !user || !@group) || !user || !@group || @group)',
+    );
+
+    const UNMATCHED_WRAPPER_EXPRESSIONS = array(
+        '(user || !@group && @group && !(!@group || !user && !@group)',
+        '(user || @group || user) && (@group || !@group && @group'
+    );
+
+    const NOT_ENOUGH_ARGS_EXPRESSIONS = array(
+        '!(@group && user && @group) && (!@group && !)',
+        '!(@group || !@group || !@group) || (user &&)',
+        '!(@group || !user ||) || !(@)',
+        '!(@group || user && !user) && @',
+        '!(@group || user && !user) ||',
+        '@!usr', // @ takes "!", but when ! is parsed, no arg is left
+        '@@group', // @ takes "@", but when ! is parsed, no arg is left
+    );
+
+
+    const MALFORMED_EXPRESSIONS = array(
+        'usr usr2', // More than one element in root
+        '()', // Subexpression must have one root
+        '(usr usr2)',
+        '@()', // Group takes exactly a literal
+        '@(group)'
+    );
+
+
     public function test_parse()
     {
         foreach (self::VALID_EXPRESSIONS as $expr) {
@@ -77,6 +124,76 @@ class general_plugin_ifauthex_test extends DokuWikiTest
             $this->assertNotNull($rebuiltExpr = $ast->getRepresentation());
             $this->assertEquals($rebuiltExpr, preg_replace('/\s/', '', $expr));
         }
+    }
+
+    public function test_unknown_token()
+    {
+        foreach (self::UNKNOWN_TOKEN_EXPRESSIONS as $expr) {
+            $exc = null;
+            try {
+                parse($expr);
+            } catch (Exception $e) {
+                $exc = $e;
+            }
+            $this->assertInstanceOf(\AST\UnknownTokenException::class, $exc);
+        }
+    }
+
+    public function test_unmatched_wrappers()
+    {
+        foreach (self::UNMATCHED_WRAPPER_EXPRESSIONS as $expr) {
+            $exc = null;
+            try {
+                parse($expr);
+            } catch (Exception $e) {
+                $exc = $e;
+            }
+            $this->assertInstanceOf(\AST\UnmatchedWrapperException::class, $exc);
+        }
+    }
+
+
+    public function test_not_enough_args()
+    {
+        foreach (self::NOT_ENOUGH_ARGS_EXPRESSIONS as $expr) {
+            $exc = null;
+            try {
+                parse($expr);
+            } catch (Exception $e) {
+                $exc = $e;
+            }
+            $this->assertInstanceOf(\AST\NotEnoughArgumentsException::class, $exc);
+        }
+    }
+
+    public function test_malformed()
+    {
+        foreach (self::MALFORMED_EXPRESSIONS as $expr) {
+            $exc = null;
+            try {
+                $ast = null;
+                // The expression must parse, but not validate
+                $this->assertNotNull($ast = parse($expr));
+                $ast->ensureWellFormed();
+            } catch (Exception $e) {
+                $exc = $e;
+            }
+            $this->assertInstanceOf(\AST\MalformedExpressionException::class, $exc);
+        }
+    }
+
+    public function test_empty_parentehses() {
+        // This must not throw. It's malformed, but it's parsed correctly.
+        $this->assertNotNull(parse('()'));
+    }
+
+
+
+    public function test_depth_limit()
+    {
+        global $EXPR_DEPTH_LIMIT;
+        $this->expectException(RuntimeException::class);
+        parse(str_repeat('(', $EXPR_DEPTH_LIMIT) . 'a && b' . str_repeat(')', $EXPR_DEPTH_LIMIT));
     }
 
     /**
