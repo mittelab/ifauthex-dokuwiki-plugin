@@ -11,7 +11,7 @@ if (!defined('DOKU_INC')) {
     die();
 }
 
-require_once(__DIR__ . '/../lib/grammar.php');
+require_once(__DIR__ . '/lib/grammar.php');
 
 class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
 {
@@ -47,12 +47,12 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
      */
     public function connectTo($mode)
     {
-        $this->Lexer->addEntryPattern('<ifauth(ex)?\s+.*?>(?=.*?\x3C/ifauth(ex)?\x3E)', $mode, 'plugin_ifauthex_ifauthex');
+        $this->Lexer->addEntryPattern('<ifauth(ex)?\s+.*?>(?=.*?\x3C/ifauth(ex)?\x3E)', $mode, 'plugin_ifauthex');
     }
 
    public function postConnect()
    {
-       $this->Lexer->addExitPattern('<\/ifauth(ex)?>', 'plugin_ifauthex_ifauthex');
+       $this->Lexer->addExitPattern('<\/ifauth(ex)?>', 'plugin_ifauthex');
    }
 
     /**
