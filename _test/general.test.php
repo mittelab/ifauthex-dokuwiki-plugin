@@ -10,6 +10,9 @@ require_once(__DIR__ . '/../syntax/exceptions.php');
  */
 class general_plugin_ifauthex_test extends DokuWikiTest
 {
+
+    protected $pluginsEnabled = array('ifauthex');
+
     const VALID_EXPRESSIONS = array(
         'user',
         '!user',
@@ -103,7 +106,6 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         '@!usr', // @ takes "!", but when ! is parsed, no arg is left
         '@@group', // @ takes "@", but when ! is parsed, no arg is left
     );
-
 
     const MALFORMED_EXPRESSIONS = array(
         'usr usr2', // More than one element in root

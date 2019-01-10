@@ -9,7 +9,7 @@ before_script:
 - mv phpunit.phar /usr/local/bin/phpunit
 - git clone git://github.com/splitbrain/dokuwiki.git
 - pushd dokuwiki/lib/plugins
-- ln -s $CI_PROJECT_DIR $CI_PROJECT_NAME
+- ln -s $CI_PROJECT_DIR ifauthex
 - popd
 
 test:
