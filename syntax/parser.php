@@ -385,7 +385,7 @@ class ElementDefinition {
         $elmArgs = self::_extractAlternateChain($args, $firstTokPosition + 1, $chainLength);
         $elmInst = new ElementInstance($definition, $elmArgs);
         if ($firstTokPosition + $chainLength * 2 > count($args)) {
-            throw new NotEnoughArgumentsException($definition, $args[$firstTokPosition]);
+            throw new NotEnoughArgumentsException($definition);
         }
         array_splice($args, $firstTokPosition, $chainLength * 2, array($elmInst));
         return $firstTokPosition;
@@ -398,9 +398,9 @@ class ElementDefinition {
         $elmArgs = self::_extractAlternateChain($args, $firstTokPosition - 1, $chainLength);
         $elmInst = new ElementInstance($definition, $elmArgs);
         if ($firstTokPosition == 0) {
-            throw new NotEnoughArgumentsException($definition, $args[$firstTokPosition]);
+            throw new NotEnoughArgumentsException($definition);
         } elseif ($firstTokPosition + $chainLength * 2 - 1 > count($args)) {
-            throw new NotEnoughArgumentsException($definition, $args[$firstTokPosition - 1]);
+            throw new NotEnoughArgumentsException($definition);
         }
         array_splice($args, $firstTokPosition - 1, $chainLength * 2, array($elmInst));
         return $firstTokPosition - 1;
@@ -413,9 +413,9 @@ class ElementDefinition {
         $elmArgs = self::_extractAlternateChain($args, $firstTokPosition - 1, $chainLength + 1);
         $elmInst = new ElementInstance($definition, $elmArgs);
         if ($firstTokPosition == 0) {
-            throw new NotEnoughArgumentsException($definition, $args[$firstTokPosition]);
+            throw new NotEnoughArgumentsException($definition);
         } elseif ($firstTokPosition + $chainLength * 2 > count($args)) {
-            throw new NotEnoughArgumentsException($definition, $args[$firstTokPosition - 1]);
+            throw new NotEnoughArgumentsException($definition);
         }
         array_splice($args, $firstTokPosition - 1, $chainLength * 2 + 1, array($elmInst));
         return $firstTokPosition - 1;

@@ -54,22 +54,16 @@ class InvalidExpressionException extends Exception  {
 
 class NotEnoughArgumentsException extends Exception {
     private $_elementDefinition = null;
-    private $_firstTokenInstance = null;
 
-    public function __construct($elementDefinition, $firstTokenInstance, $code = 0, Exception $previous = null) {
+    public function __construct($elementDefinition, $code = 0, Exception $previous = null) {
         $this->_elementDefinition = $elementDefinition;
-        $this->_firstTokenInstance = $firstTokenInstance;
-        $message = 'Not enough arguments for operator ' . $elementDefinition->name()
-            . ' encountered at position ' . $firstTokenInstance->position() . ', around "'
-            . substr($firstTokenInstance->text(), max(0, $firstTokenInstance->position() - 3), $firstTokenInstance->length() + 3)
-            . '".';
+        $message = 'Not enough arguments for operator ' . $elementDefinition->name() . '.';
         if ($elementDefinition->arity() > 0) {
             $message .= ' Expected ' . $elementDefinition->arity() . ' arguments.';
         }
         parent::__construct($message, $code, $previous);
     }
 
-    public function getFirstTokenInstance() { return $this->_firstTokenInstance; }
     public function getElementDefinition() { return $this->_elementDefinition; }
 
     public function __toString() {
