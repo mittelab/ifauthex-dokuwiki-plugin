@@ -95,7 +95,7 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
      */
     public function render($mode, Doku_Renderer $renderer, $data)
     {
-        if ($mode !== 'xhtml') {
+        if ($mode == 'xhtml') {
             list($state, $expr) = $data;
             switch ($state) {
                 case DOKU_LEXER_ENTER:
