@@ -122,7 +122,7 @@ class general_plugin_ifauthex_test extends DokuWikiTest
             $failureMsg = 'Assertion failed at expression "' . $expr . '".';
             $ast = null;
             $rebuiltExpr = null;
-            $this->assertNotNull($ast = parse($expr));
+            $this->assertNotNull($ast = auth_expr_parse($expr));
             $this->assertNotNull($rebuiltExpr = $ast->getRepresentation());
             $this->assertEquals($rebuiltExpr, preg_replace('/\s/', '', $expr));
         }
@@ -133,7 +133,7 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         foreach (self::UNKNOWN_TOKEN_EXPRESSIONS as $expr) {
             $exc = null;
             try {
-                parse($expr);
+                auth_expr_parse($expr);
             } catch (Exception $e) {
                 $exc = $e;
             }
@@ -146,7 +146,7 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         foreach (self::UNMATCHED_WRAPPER_EXPRESSIONS as $expr) {
             $exc = null;
             try {
-                parse($expr);
+                auth_expr_parse($expr);
             } catch (Exception $e) {
                 $exc = $e;
             }
@@ -160,7 +160,7 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         foreach (self::NOT_ENOUGH_ARGS_EXPRESSIONS as $expr) {
             $exc = null;
             try {
-                parse($expr);
+                auth_expr_parse($expr);
             } catch (Exception $e) {
                 $exc = $e;
             }
@@ -175,7 +175,7 @@ class general_plugin_ifauthex_test extends DokuWikiTest
             try {
                 $ast = null;
                 // The expression must parse, but not validate
-                $this->assertNotNull($ast = parse($expr));
+                $this->assertNotNull($ast = auth_expr_parse($expr));
                 $ast->ensureWellFormed();
             } catch (Exception $e) {
                 $exc = $e;
@@ -186,16 +186,16 @@ class general_plugin_ifauthex_test extends DokuWikiTest
 
     public function test_empty_parentehses() {
         // This must not throw. It's malformed, but it's parsed correctly.
-        $this->assertNotNull(parse('()'));
+        $this->assertNotNull(auth_expr_parse('()'));
     }
 
 
 
     public function test_depth_limit()
     {
-        global $EXPR_DEPTH_LIMIT;
+        $depthLimit = \AST\parse_config()->EXPR_DEPTH_LIMIT;
         $this->expectException(RuntimeException::class);
-        parse(str_repeat('(', $EXPR_DEPTH_LIMIT) . 'a && b' . str_repeat(')', $EXPR_DEPTH_LIMIT));
+        auth_expr_parse(str_repeat('(', $depthLimit) . 'a && b' . str_repeat(')', $depthLimit));
     }
 
     /**

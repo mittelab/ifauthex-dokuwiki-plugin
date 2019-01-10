@@ -118,15 +118,32 @@ class OpOr extends ElementDefinition {
     }
 }
 
-$ALL_ELEMENTS = array(new Literal(), new SubExpr(), new OpInGroup(), new OpNot(), new OpAnd(), new OpOr());
-$IGNORE_TOKENS = array(new TokenDefinition(' ', 'SPC', '/\s+/'));
-$ALL_TOKENS = array_merge($IGNORE_TOKENS, ElementDefinition::extractUsedTokens($ALL_ELEMENTS));
+function auth_expr_all_elements() {
+    static $ALL_ELEMENTS = null;
+    if ($ALL_ELEMENTS === null) {
+        $ALL_ELEMENTS = array(new Literal(), new SubExpr(), new OpInGroup(), new OpNot(), new OpAnd(), new OpOr());
+    }
+    return $ALL_ELEMENTS;
+}
 
-function parse($expr) {
-    global $ALL_ELEMENTS;
-    global $IGNORE_TOKENS;
-    global $ALL_TOKENS;
-    return \AST\parse(\AST\tokenize($expr, $ALL_TOKENS, $IGNORE_TOKENS), $ALL_ELEMENTS);
+function auth_expr_ignore_tokens() {
+    static $IGNORE_TOKENS = null;
+    if ($IGNORE_TOKENS === null) {
+        $IGNORE_TOKENS = array(new TokenDefinition(' ', 'SPC', '/\s+/'));
+    }
+    return $IGNORE_TOKENS;
+}
+
+function auth_expr_all_tokens() {
+    static $ALL_TOKENS = null;
+    if ($ALL_TOKENS === null) {
+        $ALL_TOKENS = array_merge(auth_expr_ignore_tokens(), ElementDefinition::extractUsedTokens(auth_expr_all_elements()));
+    }
+    return $ALL_TOKENS;
+}
+
+function auth_expr_parse($expr) {
+    return \AST\parse(\AST\tokenize($expr, auth_expr_all_tokens(), auth_expr_ignore_tokens()), auth_expr_all_elements());
 }
 
 ?>
