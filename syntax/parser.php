@@ -357,19 +357,14 @@ class ElementDefinition {
         if ($args[$position]->definition() != $openTokDef) {
             return 0;
         }
-        if ($nested) {
-            // Get the longest sequence
-            for ($i = count($args) - 1; $i > $position; --$i) {
-                if ($args[$i]->definition() == $closeTokDef) {
+        $nest = 1;
+        for ($i = $position + 1; $i < count($args); ++$i) {
+            if ($args[$i]->definition() == $closeTokDef) {
+                if (--$nest <= 0) {
                     return $i - $position + 1;
                 }
-            }
-        } else {
-            // Get the shortest sequence
-            for ($i = $position + 1; $i < count($args); ++$i) {
-                if ($args[$i]->definition() == $closeTokDef) {
-                    return $i - $position + 1;
-                }
+            } else if ($nested && $args[$i]->definition() == $openTokDef) {
+                ++$nest;
             }
         }
         return 1;  // Which means unmatched sequence
