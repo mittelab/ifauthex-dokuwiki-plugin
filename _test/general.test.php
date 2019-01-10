@@ -189,6 +189,10 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         $this->assertNotNull(auth_expr_parse('()'));
     }
 
+    public function test_empty() {
+        // This must not throw. It's malformed, but it's parsed correctly.
+        $this->assertNotNull(auth_expr_parse(''));
+    }
 
 
     public function test_depth_limit()
