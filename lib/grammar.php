@@ -26,7 +26,7 @@ class EvaluationContext {
         $key2 = 'grps';
         if (is_array($INFO) && array_key_exists($key1, $INFO)) {
             if (is_array($INFO[$key1]) && array_key_exists($key2, $INFO[$key1])) {
-                return in_array($groupName, $INFO[$key1][$key2]);
+                return in_array($group, $INFO[$key1][$key2]);
             }
         }
         return false;
