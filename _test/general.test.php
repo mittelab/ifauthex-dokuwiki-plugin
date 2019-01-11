@@ -202,6 +202,13 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         auth_expr_parse(str_repeat('(', $depthLimit) . 'a && b' . str_repeat(')', $depthLimit));
     }
 
+    public function test_output() {
+        $info = array();
+        $instructions = p_get_instructions('<ifauth nonexistent>hideme</ifauth><ifauth !nonexistent>showme</ifauth>');
+        $xhtml = p_render('xhtml', $instructions, $info);
+        $this->assertTrue(stristr($xhtml, 'showme') !== false);
+        $this->assertTrue(stristr($xhtml, 'hideme') === false);
+    }
     /**
      * Simple test to make sure the plugin.info.txt is in correct format
      */
