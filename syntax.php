@@ -35,12 +35,11 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                 $matches = null;
                 preg_match('/^<ifauth\b(.*?)>$/', $match, $matches);
                 if (is_array($matches) && count($matches) > 0) {
-                    $authExpr = $matches[count($matches) - 1]; // the last group
-                    try {
-                        return array($state, auth_expr_parse($authExpr));
-                    } catch (Exception $e) {
-                        // Simply continue
-                    }
+                    // The last group contains the expression.
+                    // Can't already pre-parse because DokuWiki serializes the
+                    // objects that are returned, but it doesn't know about our
+                    // custom classes at this point.
+                    return array($state, $matches[count($matches) - 1]);
                 }
                 return array($state, null);
                 break;
@@ -63,6 +62,7 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                         return false;
                     }
                     try {
+                        $exprOrMatch = auth_expr_parse($exprOrMatch);
                         $this->_doRender = $exprOrMatch->evaluate();
                     } catch (Exception $e) {
                         $this->_doRender = null;
