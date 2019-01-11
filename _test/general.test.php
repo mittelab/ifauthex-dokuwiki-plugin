@@ -208,7 +208,71 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         $xhtml = p_render('xhtml', $instructions, $info);
         $this->assertTrue(stristr($xhtml, 'showme') !== false);
         $this->assertTrue(stristr($xhtml, 'hideme') === false);
+
+        auth_expr_evaluation_context()->SIMULATE_USERS = array('nonexistent');
+        $xhtml = p_render('xhtml', $instructions, $info);
+        $this->assertTrue(stristr($xhtml, 'showme') === false);
+        $this->assertTrue(stristr($xhtml, 'hideme') !== false);
+        auth_expr_evaluation_context()->SIMULATE_USERS = null;
     }
+
+    public function test_operators() {
+        auth_expr_evaluation_context()->SIMULATE_IN_GROUPS = array('group');
+        auth_expr_evaluation_context()->SIMULATE_USERS = array('user');
+
+        $this->assertTrue(auth_expr_parse('user')->evaluate());
+        $this->assertFalse(auth_expr_parse('!user')->evaluate());
+        $this->assertTrue(auth_expr_parse('!user2')->evaluate());
+        $this->assertFalse(auth_expr_parse('user2')->evaluate());
+        $this->assertTrue(auth_expr_parse('@group')->evaluate());
+        $this->assertFalse(auth_expr_parse('!@group')->evaluate());
+        $this->assertTrue(auth_expr_parse('!@group2')->evaluate());
+        $this->assertFalse(auth_expr_parse('@group2')->evaluate());
+
+        $this->assertTrue(auth_expr_parse('user || @group')->evaluate());
+        $this->assertTrue(auth_expr_parse('user || !@group')->evaluate());
+        $this->assertTrue(auth_expr_parse('!user || @group')->evaluate());
+        $this->assertFalse(auth_expr_parse('!user || !@group')->evaluate());
+        $this->assertFalse(auth_expr_parse('user2 || @group2')->evaluate());
+        $this->assertTrue(auth_expr_parse('user || @group2')->evaluate());
+        $this->assertTrue(auth_expr_parse('user2 || @group')->evaluate());
+
+        $this->assertTrue(auth_expr_parse('user && @group')->evaluate());
+        $this->assertFalse(auth_expr_parse('user && !@group')->evaluate());
+        $this->assertFalse(auth_expr_parse('!user && @group')->evaluate());
+        $this->assertFalse(auth_expr_parse('!user && !@group')->evaluate());
+        $this->assertFalse(auth_expr_parse('user2 && @group2')->evaluate());
+        $this->assertFalse(auth_expr_parse('user && @group2')->evaluate());
+        $this->assertFalse(auth_expr_parse('user2 && @group')->evaluate());
+
+        $this->assertTrue(auth_expr_parse('(user || @group)')->evaluate());
+        $this->assertTrue(auth_expr_parse('(user || !@group)')->evaluate());
+        $this->assertTrue(auth_expr_parse('(!user || @group)')->evaluate());
+        $this->assertFalse(auth_expr_parse('(!user || !@group)')->evaluate());
+        $this->assertFalse(auth_expr_parse('(user2 || @group2)')->evaluate());
+        $this->assertTrue(auth_expr_parse('(user || @group2)')->evaluate());
+        $this->assertTrue(auth_expr_parse('(user2 || @group)')->evaluate());
+
+        $this->assertFalse(auth_expr_parse('!(user || @group)')->evaluate());
+        $this->assertFalse(auth_expr_parse('!(user || !@group)')->evaluate());
+        $this->assertFalse(auth_expr_parse('!(!user || @group)')->evaluate());
+        $this->assertTrue(auth_expr_parse('!(!user || !@group)')->evaluate());
+        $this->assertTrue(auth_expr_parse('!(user2 || @group2)')->evaluate());
+        $this->assertFalse(auth_expr_parse('!(user || @group2)')->evaluate());
+        $this->assertFalse(auth_expr_parse('!(user2 || @group)')->evaluate());
+
+        $this->assertTrue(auth_expr_parse('user, @group')->evaluate());
+        $this->assertTrue(auth_expr_parse('user, !@group')->evaluate());
+        $this->assertTrue(auth_expr_parse('!user, @group')->evaluate());
+        $this->assertFalse(auth_expr_parse('!user, !@group')->evaluate());
+        $this->assertFalse(auth_expr_parse('user2, @group2')->evaluate());
+        $this->assertTrue(auth_expr_parse('user, @group2')->evaluate());
+        $this->assertTrue(auth_expr_parse('user2, @group')->evaluate());
+
+        auth_expr_evaluation_context()->SIMULATE_IN_GROUPS = null;
+        auth_expr_evaluation_context()->SIMULATE_USERS = null;
+    }
+
     /**
      * Simple test to make sure the plugin.info.txt is in correct format
      */
