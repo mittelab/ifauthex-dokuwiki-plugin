@@ -40,7 +40,7 @@ class EvaluationContext {
         }
         $key = 'REMOTE_USER';
         if (array_key_exists($key, $_SERVER)) {
-            return $_SERVER[$key] == $elmInstance->getStringValue();
+            return $_SERVER[$key] == $user;
         }
         return false;
     }
