@@ -2,7 +2,12 @@ ifauthex Plugin for DokuWiki
 ===
 [![pipeline status](https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin/badges/master/pipeline.svg)](https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin/commits/master)
 
+**Latest release: v0.0, [download here](https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin/-/jobs/artifacts/v0.0/raw/ifauthex.zip?job=package).**  
+You can use the download link URL to install it on DokuWiki directly.
+
 **Toggles content depending on user and user groups.**
+
+---
 
 All documentation for this plugin can be found at
 [https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin](https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin)
