@@ -204,7 +204,7 @@ class general_plugin_ifauthex_test extends DokuWikiTest
 
     public function test_output() {
         $info = array();
-        $instructions = p_get_instructions('<ifauth nonexistent>hideme</ifauth><ifauth !nonexistent>showme</ifauth>');
+        $instructions = p_get_instructions('<ifauth (nonexistent)>hideme</ifauth><ifauth !(nonexistent)>showme</ifauth>');
         $xhtml = p_render('xhtml', $instructions, $info);
         $this->assertTrue(stristr($xhtml, 'showme') !== false);
         $this->assertTrue(stristr($xhtml, 'hideme') === false);

@@ -37,7 +37,7 @@ class SubExpr extends ElementDefinition {
         }
     }
     public function _evaluateWellFormed($elmInstance) {
-        return $elmInstance->evaluateArgs();
+        return $elmInstance->evaluateArgs()[0];
     }
 }
 
