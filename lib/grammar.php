@@ -110,11 +110,11 @@ class OpOr extends ElementDefinition {
             if (!is_bool($arg)) {
                 throw new InvalidExpressionException($elmInstance, 'Or called on non-boolean arguments.');
             }
-            if (!$arg) {
-                return false;
+            if ($arg) {
+                return true;
             }
         }
-        return true;
+        return false;
     }
 }
 
