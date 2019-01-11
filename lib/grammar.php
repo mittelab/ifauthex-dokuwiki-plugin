@@ -10,17 +10,59 @@ use \AST\InvalidExpressionException;
 use \AST\MalformedExpressionException;
 use \AST\Fixing;
 
+
+class EvaluationContext {
+    public $SIMULATE_IN_GROUPS = null;
+    public $SIMULATE_USERS = null;
+
+    public function belongToGroup($group) {
+        if (is_array($this->SIMULATE_IN_GROUPS)) {
+            if (in_array($group, $this->SIMULATE_IN_GROUPS)) {
+                return true;
+            }
+        }
+        global $INFO;
+        $key1 = 'userinfo';
+        $key2 = 'grps';
+        if (is_array($INFO) && array_key_exists($key1, $INFO)) {
+            if (is_array($INFO[$key1]) && array_key_exists($key2, $INFO[$key1])) {
+                return in_array($groupName, $INFO[$key1][$key2]);
+            }
+        }
+        return false;
+    }
+
+    public function isUser($user) {
+        if (is_array($this->SIMULATE_USERS)) {
+            if (in_array($user, $this->SIMULATE_USERS)) {
+                return true;
+            }
+        }
+        $key = 'REMOTE_USER';
+        if (array_key_exists($key, $_SERVER)) {
+            return $_SERVER[$key] == $elmInstance->getStringValue();
+        }
+        return false;
+    }
+}
+
+function auth_expr_evaluation_context() {
+    static $ctx = null;
+    if ($ctx === null) {
+        $ctx = new EvaluationContext();
+    }
+    return $ctx;
+}
+
+
 class Literal extends ElementDefinition {
     public function __construct() {
         $T_LITERAL = new TokenDefinition(null, 'LIT', '/\w+/');
         parent::__construct('Literal', Fixing::None, $T_LITERAL, 0);
     }
     public function _evaluateWellFormed($elmInstance) {
-        $key = 'REMOTE_USER';
-        if (array_key_exists($key, $_SERVER)) {
-            return $_SERVER[$key] == $elmInstance->getStringValue();
-        }
-        return false;
+        $userName = $elmInstance->getStringValue();
+        return auth_expr_evaluation_context()->isUser($userName);
     }
 }
 
@@ -54,15 +96,7 @@ class OpInGroup extends ElementDefinition {
     }
     public function _evaluateWellFormed($elmInstance) {
         $groupName = $elmInstance->args()[0]->getStringValue();
-        global $INFO;
-        $key1 = 'userinfo';
-        $key2 = 'grps';
-        if (is_array($INFO) && array_key_exists($key1, $INFO)) {
-            if (is_array($INFO[$key1]) && array_key_exists($key2, $INFO[$key1])) {
-                return in_array($groupName, $INFO[$key1][$key2]);
-            }
-        }
-        return false;
+        return auth_expr_evaluation_context()->belongToGroup($groupName);
     }
 }
 
