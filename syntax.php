@@ -15,21 +15,51 @@ require_once(__DIR__ . '/lib/grammar.php');
 
 class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
 {
-    private $_doRender = null;
+    /** @var null|string The original document */
+    protected $originalDoc = null;
+    /** @var bool is the current document diverted? */
+    protected $isDiverted = false;
 
-    public function getType() { return 'formatting'; }
 
-    public function getSort() { return 350; }
+    /** @inheritDoc */
+    public function getType()
+    {
+        return 'formatting';
+    }
 
-    public function connectTo($mode) {
+    /** @inheritDoc */
+    function getAllowedTypes()
+    {
+        return array('container', 'formatting', 'substition', 'protected', 'disabled', 'paragraphs');
+    }
+
+    /** @inheritDoc */
+    function getPType()
+    {
+        return 'stack';
+    }
+
+    /** @inheritDoc */
+    public function getSort()
+    {
+        return 158;
+    }
+
+    /** @inheritDoc */
+    public function connectTo($mode)
+    {
         $this->Lexer->addEntryPattern('<ifauth\b.*?>(?=.*?</ifauth>)', $mode, 'plugin_ifauthex');
     }
 
-    public function postConnect() {
-       $this->Lexer->addExitPattern('</ifauth>', 'plugin_ifauthex');
+    /** @inheritDoc */
+    public function postConnect()
+    {
+        $this->Lexer->addExitPattern('</ifauth>', 'plugin_ifauthex');
     }
 
-    public function handle($match, $state, $pos, Doku_Handler $handler) {
+    /** @inheritDoc */
+    public function handle($match, $state, $pos, Doku_Handler $handler)
+    {
         switch ($state) {
             case DOKU_LEXER_ENTER:
                 $matches = null;
@@ -42,47 +72,56 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                     return array($state, $matches[count($matches) - 1]);
                 }
                 return array($state, null);
-                break;
             case DOKU_LEXER_UNMATCHED:
                 return array($state, $match);
-                break;
             case DOKU_LEXER_EXIT:
                 return array($state, null);
-                break;
         }
-        return array();
+        return false;
     }
 
-    public function render($mode, Doku_Renderer $renderer, $data) {
-        if ($mode == 'xhtml') {
-            list($state, $exprOrMatch) = $data;
-            switch ($state) {
-                case DOKU_LEXER_ENTER:
-                    if ($exprOrMatch === null) {
-                        return false;
+    /** @inheritDoc */
+    public function render($mode, Doku_Renderer $renderer, $data)
+    {
+        list($state, $exprOrMatch) = $data;
+
+        // never cache
+        $renderer->nocache();
+
+        switch ($state) {
+            case DOKU_LEXER_ENTER:
+                if ($exprOrMatch === null) {
+                    // something went wrong
+                    return false;
+                }
+                try {
+                    // check if current user should see the content
+                    $exprOrMatch = auth_expr_parse($exprOrMatch);
+                    $shouldRender = (bool) $exprOrMatch->evaluate();
+                    if(!$shouldRender) {
+                        // point the renderer's doc to something else, remembering the old one
+                        $this->originalDoc = &$renderer->doc;
+                        $ignoredDoc = '';
+                        $renderer->doc = &$ignoredDoc;
+                        $this->isDiverted = true;
                     }
-                    try {
-                        $exprOrMatch = auth_expr_parse($exprOrMatch);
-                        $this->_doRender = $exprOrMatch->evaluate();
-                    } catch (Exception $e) {
-                        $this->_doRender = null;
-                        return false;
-                    }
-                    break;
-                case DOKU_LEXER_UNMATCHED:
-                    if ($this->_doRender === true) {
-                        $output = p_render('xhtml', p_get_instructions($exprOrMatch), $info);
-                        // Remove '\n<p>\n' from start and '\n</p>\n' from the end.
-                        $output = preg_replace('/^\s*<p>\s*/i', '', $output);
-                        $output = preg_replace('/\s*<\/p>\s*$/i', '', $output);
-                        $renderer->doc .= $output;
-                    }
-                    $renderer->nocache();
-                    break;
-                case DOKU_LEXER_EXIT:
-                    break;
-            }
+                } catch (Exception $e) {
+                    // something went wrong parsing the expression
+                    msg(hsc($e->getMessage()), -1);
+                    return false;
+                }
+                break;
+            case DOKU_LEXER_UNMATCHED:
+                $renderer->cdata($exprOrMatch);
+                break;
+            case DOKU_LEXER_EXIT:
+                // point the renderer's doc back to the original
+                if($this->isDiverted) {
+                    $renderer->doc = &$this->originalDoc;
+                }
+                break;
         }
+
         return true;
     }
 }
