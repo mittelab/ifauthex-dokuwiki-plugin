@@ -24,7 +24,7 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
     /** @inheritDoc */
     function getAllowedTypes()
     {
-        return array('container', 'formatting', 'substition', 'protected', 'disabled', 'paragraphs');
+        return array('container', 'formatting', 'substition', 'protected', 'disabled', 'paragraphs', 'baseonly');
     }
 
     /** @inheritDoc */
@@ -49,7 +49,6 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
     public function postConnect()
     {
         $this->Lexer->addExitPattern('</ifauth>', 'plugin_ifauthex');
-        $this->Lexer->addPattern('[ \t]*={2,}[^\n]+={2,}[ \t]*(?=\n)', 'plugin_ifauthex');
     }
 
     /** @inheritDoc */
@@ -69,20 +68,6 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                 }
                 return array($state, null);
             case DOKU_LEXER_MATCHED:
-                // source of the following solution: plugin wrap
-                // we have a == header ==, use the core header() renderer
-                // (copied from core header() in inc/parser/handler.php)
-                $title = trim($match);
-                $level = 7 - strspn($title,'=');
-                if($level < 1) $level = 1;
-                $title = trim($title,'=');
-                $title = trim($title);
-
-                $handler->_addCall('header',array($title,$level,$pos), $pos);
-                // close the section edit the header could open
-#                if ($title && $level <= $conf['maxseclevel']) {
-#                    $handler->addPluginCall('ifauthex_closesection', array(), DOKU_LEXER_SPECIAL, $pos, '');
-#                }
                 break;
             case DOKU_LEXER_UNMATCHED:
                 return array($state, $match);
