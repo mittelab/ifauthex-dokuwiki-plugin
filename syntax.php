@@ -86,9 +86,9 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
 
                 $handler->_addCall('header',array($title,$level,$pos), $pos);
                 // close the section edit the header could open
-                if ($title && $level <= $conf['maxseclevel']) {
-                    $handler->addPluginCall('ifauthex_closesection', array(), DOKU_LEXER_SPECIAL, $pos, '');
-                }
+#                if ($title && $level <= $conf['maxseclevel']) {
+#                    $handler->addPluginCall('ifauthex_closesection', array(), DOKU_LEXER_SPECIAL, $pos, '');
+#                }
                 break;
             case DOKU_LEXER_UNMATCHED:
                 return array($state, $match);

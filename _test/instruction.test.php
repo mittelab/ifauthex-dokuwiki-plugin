@@ -20,7 +20,7 @@ class instructions_plugin_ifauthex_test extends DokuWikiTest
 
         $calls = array_map([self::class, 'stripByteIndex'], $calls);
 
-        $this->assertEquals(json_decode(file_get_contents(__DIR__.'/testpage.json')), $calls);
+        $this->assertJsonStringEqualsJsonFile(__DIR__.'/testpage.json', json_encode($calls));
 
         //print_r($calls);
     }
