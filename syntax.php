@@ -36,7 +36,7 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
     /** @inheritDoc */
     public function getSort()
     {
-        return 158;
+        return 195;
     }
 
     /** @inheritDoc */
@@ -100,7 +100,14 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                         $renderer->meta['ifauthex.originalDoc'] = &$renderer->doc;
                         $ignoredDoc = '';
                         $renderer->doc = &$ignoredDoc;
+
+                        // do the same for the toc list
+                        $renderer->meta['ifauthex.originalToc'] = &$renderer->toc;
+                        $ignoredToc = [];
+                        $renderer->toc = &$ignoredToc;
+
                         $renderer->meta['ifauthex.isDiverted'] = true;
+
                     }
                 } catch (Exception $e) {
                     // something went wrong parsing the expression
@@ -112,9 +119,10 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                 $renderer->cdata($exprOrMatch);
                 break;
             case DOKU_LEXER_EXIT:
-                // point the renderer's doc back to the original
+                // point the renderer's doc and toc back to the original
                 if($renderer->meta['ifauthex.isDiverted']) {
                     $renderer->doc = &$renderer->meta['ifauthex.originalDoc'];
+                    $renderer->toc = &$renderer->meta['ifauthex.originalToc'];
                     $renderer->meta['ifauthex.isDiverted'] = false;
                 }
                 break;
