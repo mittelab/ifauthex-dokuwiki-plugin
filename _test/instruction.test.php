@@ -1,0 +1,41 @@
+<?php
+
+/**
+ * General tests for the ifauthex plugin
+ *
+ * @group plugin_ifauthex
+ * @group plugins
+ */
+class instructions_plugin_ifauthex_test extends DokuWikiTest
+{
+
+    protected $pluginsEnabled = array('ifauthex');
+
+
+
+    public function test_instructions()
+    {
+
+        $calls = p_get_instructions(file_get_contents(__DIR__.'/testpage.txt'));
+
+        $calls = array_map([self::class, 'stripByteIndex'], $calls);
+
+        $this->assertEquals(json_decode(file_get_contents(__DIR__.'/testpage.json')), $calls);
+
+        //print_r($calls);
+    }
+
+    /**
+     * copied from the core test suite, removes the byte positions
+     *
+     * @param $call
+     * @return mixed
+     */
+    public static function stripByteIndex($call) {
+        unset($call[2]);
+        if ($call[0] == "nest") {
+            $call[1][0] = array_map('stripByteIndex',$call[1][0]);
+        }
+        return $call;
+    }
+}

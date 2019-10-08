@@ -1,0 +1,28 @@
+==== Sec 1 ====
+
+1abc
+
+<ifauth admin>
+
+==== Sec 2 ====
+
+2def
+
+</ifauth>
+
+==== Sec 3 ====
+
+3ghi
+
+<ifauth admina>
+
+==== Sec 4 ====
+
+4jkl
+
+</ifauth>
+
+==== Sec 5 ====
+
+5mno
+
