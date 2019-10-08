@@ -15,12 +15,6 @@ require_once(__DIR__ . '/lib/grammar.php');
 
 class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
 {
-    /** @var null|string The original document */
-    protected $originalDoc = null;
-    /** @var bool is the current document diverted? */
-    protected $isDiverted = false;
-
-
     /** @inheritDoc */
     public function getType()
     {
@@ -118,10 +112,10 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                     $shouldRender = (bool) $exprOrMatch->evaluate();
                     if(!$shouldRender) {
                         // point the renderer's doc to something else, remembering the old one
-                        $this->originalDoc = &$renderer->doc;
+                        $renderer->meta['ifauthex.originalDoc'] = &$renderer->doc;
                         $ignoredDoc = '';
                         $renderer->doc = &$ignoredDoc;
-                        $this->isDiverted = true;
+                        $renderer->meta['ifauthex.isDiverted'] = true;
                     }
                 } catch (Exception $e) {
                     // something went wrong parsing the expression
@@ -134,8 +128,9 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                 break;
             case DOKU_LEXER_EXIT:
                 // point the renderer's doc back to the original
-                if($this->isDiverted) {
-                    $renderer->doc = &$this->originalDoc;
+                if($renderer->meta['ifauthex.isDiverted']) {
+                    $renderer->doc = &$renderer->meta['ifauthex.originalDoc'];
+                    $renderer->meta['ifauthex.isDiverted'] = false;
                 }
                 break;
         }
