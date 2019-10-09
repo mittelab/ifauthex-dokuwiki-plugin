@@ -15,12 +15,6 @@ require_once(__DIR__ . '/lib/grammar.php');
 
 class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
 {
-    /** @var null|string The original document */
-    protected $originalDoc = null;
-    /** @var bool is the current document diverted? */
-    protected $isDiverted = false;
-
-
     /** @inheritDoc */
     public function getType()
     {
@@ -30,7 +24,7 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
     /** @inheritDoc */
     function getAllowedTypes()
     {
-        return array('container', 'formatting', 'substition', 'protected', 'disabled', 'paragraphs');
+        return array('container', 'formatting', 'substition', 'protected', 'disabled', 'paragraphs', 'baseonly');
     }
 
     /** @inheritDoc */
@@ -42,7 +36,7 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
     /** @inheritDoc */
     public function getSort()
     {
-        return 158;
+        return 195;
     }
 
     /** @inheritDoc */
@@ -55,7 +49,6 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
     public function postConnect()
     {
         $this->Lexer->addExitPattern('</ifauth>', 'plugin_ifauthex');
-        $this->Lexer->addPattern('[ \t]*={2,}[^\n]+={2,}[ \t]*(?=\n)', 'plugin_ifauthex');
     }
 
     /** @inheritDoc */
@@ -75,20 +68,6 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                 }
                 return array($state, null);
             case DOKU_LEXER_MATCHED:
-                // source of the following solution: plugin wrap
-                // we have a == header ==, use the core header() renderer
-                // (copied from core header() in inc/parser/handler.php)
-                $title = trim($match);
-                $level = 7 - strspn($title,'=');
-                if($level < 1) $level = 1;
-                $title = trim($title,'=');
-                $title = trim($title);
-
-                $handler->_addCall('header',array($title,$level,$pos), $pos);
-                // close the section edit the header could open
-                if ($title && $level <= $conf['maxseclevel']) {
-                    $handler->addPluginCall('ifauthex_closesection', array(), DOKU_LEXER_SPECIAL, $pos, '');
-                }
                 break;
             case DOKU_LEXER_UNMATCHED:
                 return array($state, $match);
@@ -118,10 +97,17 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                     $shouldRender = (bool) $exprOrMatch->evaluate();
                     if(!$shouldRender) {
                         // point the renderer's doc to something else, remembering the old one
-                        $this->originalDoc = &$renderer->doc;
-                        $ignoredDoc = '';
+                        $renderer->meta['ifauthex.originalDoc'] = &$renderer->doc;
+                        $ignoredDoc = is_array($renderer->doc) ? [] : '';
                         $renderer->doc = &$ignoredDoc;
-                        $this->isDiverted = true;
+
+                        // do the same for the toc list
+                        $renderer->meta['ifauthex.originalToc'] = &$renderer->toc;
+                        $ignoredToc = [];
+                        $renderer->toc = &$ignoredToc;
+
+                        $renderer->meta['ifauthex.isDiverted'] = true;
+
                     }
                 } catch (Exception $e) {
                     // something went wrong parsing the expression
@@ -133,9 +119,11 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                 $renderer->cdata($exprOrMatch);
                 break;
             case DOKU_LEXER_EXIT:
-                // point the renderer's doc back to the original
-                if($this->isDiverted) {
-                    $renderer->doc = &$this->originalDoc;
+                // point the renderer's doc and toc back to the original
+                if($renderer->meta['ifauthex.isDiverted']) {
+                    $renderer->doc = &$renderer->meta['ifauthex.originalDoc'];
+                    $renderer->toc = &$renderer->meta['ifauthex.originalToc'];
+                    $renderer->meta['ifauthex.isDiverted'] = false;
                 }
                 break;
         }
