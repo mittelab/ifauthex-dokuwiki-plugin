@@ -98,7 +98,7 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                     if(!$shouldRender) {
                         // point the renderer's doc to something else, remembering the old one
                         $renderer->meta['ifauthex.originalDoc'] = &$renderer->doc;
-                        $ignoredDoc = '';
+                        $ignoredDoc = is_array($renderer->doc) ? [] : '';
                         $renderer->doc = &$ignoredDoc;
 
                         // do the same for the toc list
