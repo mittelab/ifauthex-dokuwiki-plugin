@@ -1,16 +1,16 @@
 IfAuthEx Plugin for DokuWiki
 ===
-**Toggle DokuWiki page content based on users and groups with arbitrary boolean expressions.**  
+**Toggle DokuWiki page content based on users and groups with arbitrary boolean expressions.**
 
-**Latest release: v0.0, [download here](https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin/-/jobs/artifacts/v0.0/raw/ifauthex.zip?job=package).**  
+**Latest release: v0.1, [download here](https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin/-/jobs/artifacts/v0.1/raw/ifauthex.zip?job=package).**
 You can use the download link URL to install it on DokuWiki directly.
 
-**GitHub mirror (issues and PR): [https://github.com/mittelab/ifauthex-dokuwiki-plugin](https://github.com/mittelab/ifauthex-dokuwiki-plugin)**  
+**GitHub mirror (issues and PR): [https://github.com/mittelab/ifauthex-dokuwiki-plugin](https://github.com/mittelab/ifauthex-dokuwiki-plugin)**
 Feel free to [open an issue](https://github.com/mittelab/ifauthex-dokuwiki-plugin/issues) or [make a pull request](https://github.com/mittelab/ifauthex-dokuwiki-plugin/pulls) here.
 
 **Documentation: [https://www.dokuwiki.org/plugin:ifauthex](https://www.dokuwiki.org/plugin:ifauthex)**
 
-**Main repository: [https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin](https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin)**  
+**Main repository: [https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin](https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin)**
 Development, testing and packaging happens on the main repo.
 
 **Last commit:** [![pipeline status](https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin/badges/master/pipeline.svg)](https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin/commits/master)
