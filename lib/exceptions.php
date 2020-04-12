@@ -10,7 +10,13 @@ class UnknownTokenException extends Exception {
     public function __construct($text, $position, $code = 0, Exception $previous = null) {
         $this->_text = $text;
         $this->_position = $position;
-        $message = 'Unknown token "' . substr($text, $position, 4) . '" at position ' . $position;
+        $message = 'Unknown token "';
+        if (extension_loaded('mbstring') === true) {
+            $message .= mb_substr($text, $position, 4);
+        } else {
+            $message .= substr($text, $position, 4);
+        }
+        $message .= '" at position ' . $position;
         parent::__construct($message, $code, $previous);
     }
 
@@ -76,9 +82,13 @@ class StrayTokenException extends Exception {
 
     public function __construct($tokenInstance, $code = 0, Exception $previous = null) {
         $this->_tokenInstance = $tokenInstance;
-        $message = 'Stray token encountered at position ' . $tokenInstance->position() . ', around "'
-            . substr($tokenInstance->text(), max(0, $tokenInstance->position() - 3), $tokenInstance->length() + 3)
-            . '".';
+        $message = 'Stray token encountered at position ' . $tokenInstance->position() . ', around "';
+        if (extension_loaded('mbstring') === true) {
+            $message .= mb_substr($tokenInstance->text(), max(0, $tokenInstance->position() - 3), $tokenInstance->length() + 3);
+        } else {
+            $message .= substr($tokenInstance->text(), max(0, $tokenInstance->position() - 3), $tokenInstance->length() + 3);
+        }
+        $message .= '".';
         parent::__construct($message, $code, $previous);
     }
 
@@ -97,9 +107,13 @@ class UnmatchedWrapperException extends Exception {
         $this->_elementDefinition = $elementDefinition;
         $this->_firstTokenInstance = $firstTokenInstance;
         $message = 'Unmatched opening token ' . $elementDefinition->tokenDefs()[0] . ' for wrapping operator '
-            . $elementDefinition->name() . ' encountered at position ' . $firstTokenInstance->position() . ', around "'
-            . substr($firstTokenInstance->text(), max(0, $firstTokenInstance->position() - 3), $firstTokenInstance->length() + 3)
-            . '". The missing closing token is ' . $elementDefinition->tokenDefs()[1] . '.';
+            . $elementDefinition->name() . ' encountered at position ' . $firstTokenInstance->position() . ', around "';
+        if (extension_loaded('mbstring') === true) {
+            $message .= mb_substr($firstTokenInstance->text(), max(0, $firstTokenInstance->position() - 3), $firstTokenInstance->length() + 3);
+        } else {
+            $message .= substr($firstTokenInstance->text(), max(0, $firstTokenInstance->position() - 3), $firstTokenInstance->length() + 3);
+        }
+        $message .= '". The missing closing token is ' . $elementDefinition->tokenDefs()[1] . '.';
         parent::__construct($message, $code, $previous);
     }
 
