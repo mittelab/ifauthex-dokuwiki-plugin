@@ -71,6 +71,13 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         'user && user || @group'
     );
 
+    const VALID_MB_EXPRESSIONS = array(
+        "\u{7D4C}\u{55B6}\u{4F01}\u{753B}\u{672C}\u{90E8}",
+        "\u{7D4C}\u{55B6}\u{4F01} && \u{753B}\u{672C}\u{90E8}",
+        "\u{7D4C}\u{55B6}\u{4F01} && \u{753B} || @\u{672C}\u{90E8}",
+        "!@\u{7D4C} || (\u{55B6}\u{4F01} && \u{753B} || @\u{672C}) && !\u{90E8}"
+    );
+
     const UNKNOWN_TOKEN_EXPRESSIONS = array(
         '!(!@group & !@group && !@group)',
         '!(!@group && !user && @group) | !(@group || user || @group)',
@@ -125,6 +132,16 @@ class general_plugin_ifauthex_test extends DokuWikiTest
             $this->assertNotNull($ast = auth_expr_parse($expr));
             $this->assertNotNull($rebuiltExpr = $ast->getRepresentation());
             $this->assertEquals($rebuiltExpr, preg_replace('/\s/', '', $expr));
+        }
+        if (\AST\TokenDefinition::supportsMultibyte()) {
+            foreach (self::VALID_MB_EXPRESSIONS as $expr) {
+                $failureMsg = 'Assertion failed at expression "' . $expr . '".';
+                $ast = null;
+                $rebuiltExpr = null;
+                $this->assertNotNull($ast = auth_expr_parse($expr));
+                $this->assertNotNull($rebuiltExpr = $ast->getRepresentation());
+                $this->assertEquals($rebuiltExpr, preg_replace('/\s/', '', $expr));
+            }
         }
     }
 
