@@ -57,7 +57,7 @@ function auth_expr_evaluation_context() {
 
 class Literal extends ElementDefinition {
     public function __construct() {
-        $T_LITERAL = new TokenDefinition(null, 'LIT', '/\w+/');
+        $T_LITERAL = new TokenDefinition(null, 'LIT', '/[\w.-]+/');
         parent::__construct('Literal', Fixing::None, $T_LITERAL, 0);
     }
     public function _evaluateWellFormed($elmInstance) {

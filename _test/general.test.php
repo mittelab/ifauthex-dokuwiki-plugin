@@ -84,7 +84,7 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         '!(!@group && @group || !user] && (!user || user && @group)',
         '!(!@group && user) && !^!@group || @group || user)',
         '!(!@group || <inject> !user && !user) || !(user || @group || !@group)',
-        '!(!@group || @group -- !@group) && (@group || @group && !@group)',
+        '!(!@group || @group {--} !@group) && (@group || @group && !@group)',
         '!(!@group || user || user) && !(!user || > !user || !user)',
         '!(!user && !@group) <|| (!@group || !user && @group)',
         '!(!user && @group && @group) / && (user || !@group || user)',
