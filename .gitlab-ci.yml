@@ -9,7 +9,7 @@ unit_test:
     - apt-get update -yqq
     - apt-get install -yqq git curl ca-certificates libxml2-dev libonig-dev
     - docker-php-ext-install mbstring xml
-    - curl https://phar.phpunit.de/phpunit-7.5.1.phar -L -o phpunit.phar
+    - curl https://phar.phpunit.de/phpunit-7.5.9.phar -L -o phpunit.phar
     - chmod +x phpunit.phar
     - mv phpunit.phar /usr/local/bin/phpunit
     - git clone git://github.com/splitbrain/dokuwiki.git
