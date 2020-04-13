@@ -57,11 +57,32 @@ function auth_expr_evaluation_context() {
 
 class Literal extends ElementDefinition {
     public function __construct() {
-        $T_LITERAL = new TokenDefinition(null, 'LIT', '/[\w.-]+/');
+        $T_LITERAL = new TokenDefinition(null, 'LIT', '/[\w.-]+|".+?(?<!\\\\)(\\\\\\\\)*"/');
         parent::__construct('Literal', Fixing::None, $T_LITERAL, 0);
     }
+    public static function unquote($strValue) {
+        // No multibyte variant, here we just operate on bytes
+        $strValue = str_replace('\\\\', '\\', $strValue);
+        $strValue = str_replace('\\"', '"', $strValue);
+        $strValue = substr($strValue, 1, strlen($strValue) - 2);
+        return $strValue;
+    }
+    public static function isQuoted($strValue) {
+        if (TokenDefinition::supportsMultibyte()) {
+            return mb_strlen($strValue) > 0 && mb_substr($strValue, 0, 1) == '"';
+        } else {
+            return strlen($strValue) > 0 && substr($strValue, 0, 1) == '"';
+        }
+    }
+    public static function getInstanceLiteralValue($elmInstance) {
+        $strValue = $elmInstance->getStringValue();
+        if (self::isQuoted($strValue)) {
+            return self::unquote($strValue);
+        }
+        return $strValue;
+    }
     public function _evaluateWellFormed($elmInstance) {
-        $userName = $elmInstance->getStringValue();
+        $userName = self::getInstanceLiteralValue($elmInstance);
         return auth_expr_evaluation_context()->isUser($userName);
     }
 }
@@ -95,7 +116,8 @@ class OpInGroup extends ElementDefinition {
         }
     }
     public function _evaluateWellFormed($elmInstance) {
-        $groupName = $elmInstance->args()[0]->getStringValue();
+        $literalInstance = $elmInstance->args()[0];
+        $groupName = Literal::getInstanceLiteralValue($literalInstance);
         return auth_expr_evaluation_context()->belongToGroup($groupName);
     }
 }
