@@ -15,6 +15,10 @@ class general_plugin_ifauthex_test extends DokuWikiTest
 
     const VALID_EXPRESSIONS = array(
         'user',
+        '"user name"',
+        'user-name',
+        'user.name',
+        '"user \\ name \\" surname"',
         '!user',
         '@group',
         '!@group',
@@ -88,7 +92,9 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         '!(!@group || user || user) && !(!user || > !user || !user)',
         '!(!user && !@group) <|| (!@group || !user && @group)',
         '!(!user && @group && @group) / && (user || !@group || user)',
-        '!(!user && user || : !user) && !(@group || !@group && user)'
+        '!(!user && user || : !user) && !(@group || !@group && user)',
+        '"user name\\"',
+        '"user name\\\\\\"'
     );
 
     const STRAY_TOKEN_EXPRESSIONS = array(
@@ -122,6 +128,9 @@ class general_plugin_ifauthex_test extends DokuWikiTest
         '@(group)'
     );
 
+    public static function strip($txt) {
+        return preg_replace('/\s/', '', $txt);
+    }
 
     public function test_parse()
     {
@@ -131,7 +140,7 @@ class general_plugin_ifauthex_test extends DokuWikiTest
             $rebuiltExpr = null;
             $this->assertNotNull($ast = auth_expr_parse($expr));
             $this->assertNotNull($rebuiltExpr = $ast->getRepresentation());
-            $this->assertEquals($rebuiltExpr, preg_replace('/\s/', '', $expr));
+            $this->assertEquals(self::strip($rebuiltExpr), self::strip($expr));
         }
         if (\AST\TokenDefinition::supportsMultibyte()) {
             foreach (self::VALID_MB_EXPRESSIONS as $expr) {
@@ -140,7 +149,7 @@ class general_plugin_ifauthex_test extends DokuWikiTest
                 $rebuiltExpr = null;
                 $this->assertNotNull($ast = auth_expr_parse($expr));
                 $this->assertNotNull($rebuiltExpr = $ast->getRepresentation());
-                $this->assertEquals($rebuiltExpr, preg_replace('/\s/', '', $expr));
+                $this->assertEquals(self::strip($rebuiltExpr), self::strip($expr));
             }
         }
     }
