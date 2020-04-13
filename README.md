@@ -2,7 +2,7 @@ IfAuthEx Plugin for DokuWiki
 ===
 **Toggle DokuWiki page content based on users and groups with arbitrary boolean expressions.**
 
-**Latest release: v0.1, [download here](https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin/-/jobs/artifacts/v0.1/raw/ifauthex.zip?job=package).**
+**Latest release: v0.2, [download here](https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin/-/jobs/artifacts/v0.2/raw/ifauthex.zip?job=package).**
 You can use the download link URL to install it on DokuWiki directly.
 
 **GitHub mirror (issues and PR): [https://github.com/mittelab/ifauthex-dokuwiki-plugin](https://github.com/mittelab/ifauthex-dokuwiki-plugin)**
