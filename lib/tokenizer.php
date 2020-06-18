@@ -131,7 +131,7 @@ class TokenInstance {
     }
 }
 
-function tokenize(string $text, array $tokDefs, array $stripTokDefs) {
+function tokenize($text, array $tokDefs, array $stripTokDefs) {
     if (TokenDefinition::supportsMultibyte()) {
         $textLen = mb_strlen($text);
     } else {
