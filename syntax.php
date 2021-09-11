@@ -15,6 +15,8 @@ require_once(__DIR__ . '/lib/grammar.php');
 
 class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
 {
+    public static $renderPermissionArr = [];
+
     /** @inheritDoc */
     public function getType()
     {
@@ -84,6 +86,7 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
 
         // never cache
         $renderer->nocache();
+        global $TOC;
 
         switch ($state) {
             case DOKU_LEXER_ENTER:
@@ -94,19 +97,23 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                 try {
                     // check if current user should see the content
                     $exprOrMatch = auth_expr_parse($exprOrMatch);
-                    $shouldRender = (bool) $exprOrMatch->evaluate();
-                    if(!$shouldRender) {
+                    $renderPermissionThisTag = (bool) $exprOrMatch->evaluate();
+                    $shouldRenderOld = $this->renderPermissionAllTags();
+                    array_push( self::$renderPermissionArr, $renderPermissionThisTag);
+                    $shouldRenderNew = $this->renderPermissionAllTags();
+
+                    // Become active if renderPermission changes from true to false
+                    if ($shouldRenderOld && (!$shouldRenderNew)) {
                         // point the renderer's doc to something else, remembering the old one
                         $renderer->meta['ifauthex.originalDoc'] = &$renderer->doc;
                         $ignoredDoc = is_array($renderer->doc) ? [] : '';
                         $renderer->doc = &$ignoredDoc;
 
                         // do the same for the toc list
-                        $renderer->meta['ifauthex.originalToc'] = &$renderer->toc;
                         $ignoredToc = [];
+                        $renderer->meta['ifauthex.originalToc'] = &$renderer->toc;
                         $renderer->toc = &$ignoredToc;
-
-                        $renderer->meta['ifauthex.isDiverted'] = true;
+                        $TOC = $ignoredToc;
 
                     }
                 } catch (Exception $e) {
@@ -120,15 +127,29 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                 break;
             case DOKU_LEXER_EXIT:
                 // point the renderer's doc and toc back to the original
-                if($renderer->meta['ifauthex.isDiverted']) {
+                $shouldRenderOld = $this->renderPermissionAllTags();
+                array_pop(self::$renderPermissionArr);
+                $shouldRenderNew = $this->renderPermissionAllTags();
+
+                // Become active if renderPermission changes from false to true
+                if( (!$shouldRenderOld) && $shouldRenderNew ) {
                     $renderer->doc = &$renderer->meta['ifauthex.originalDoc'];
                     $renderer->toc = &$renderer->meta['ifauthex.originalToc'];
-                    $renderer->meta['ifauthex.isDiverted'] = false;
+                    $TOC = &$renderer->meta['ifauthex.originalToc'];
                 }
                 break;
         }
 
         return true;
     }
-}
 
+    private function renderPermissionAllTags()
+    {
+        foreach ( self::$renderPermissionArr as $do ) {
+            if(!$do) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
