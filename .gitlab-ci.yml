@@ -7,7 +7,7 @@ variables:
 
 unit_test:
   stage: test
-  image: php
+  image: php:8.2.1
   before_script:
     - apt-get update -yqq
     - apt-get install -yqq git # curl ca-certificates libxml2-dev libonig-dev
