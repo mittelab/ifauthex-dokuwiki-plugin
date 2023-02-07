@@ -15,7 +15,32 @@ require_once(__DIR__ . '/lib/grammar.php');
 
 class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
 {
-    public static $renderPermissionArr = [];
+    private $_nestedRenderPermission = [true];
+
+    /**
+     * Returns a boolean representing whether at this depth level rendering is allowed.
+     */
+    private function innermostShouldRender()
+    {
+        return end($this->_nestedRenderPermission);
+    }
+
+    /**
+     * Pushes the permission to render of the current tag into the stack.
+     * It might not change the value of @ref innermostShouldRender, if rendering was
+     * already previously disabled by an outer tag.
+     */
+    private function pushInnerPermission($perm) {
+        array_push($this->_nestedRenderPermission, $perm && $this->innermostShouldRender());
+    }
+
+    /**
+     * Returns a boolean representing whether the content at the current nesting level is being rendered.
+     * It then pops this boolean from the stack.
+     */
+    private function popShouldRender() {
+        return array_pop($this->_nestedRenderPermission);
+    }
 
     /** @inheritDoc */
     public function getType()
@@ -27,6 +52,16 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
     function getAllowedTypes()
     {
         return array('container', 'formatting', 'substition', 'protected', 'disabled', 'paragraphs', 'baseonly');
+    }
+
+
+    /** @inheritDoc */
+    function accepts($mode) {
+        // Allow nesting the mode
+        if ($mode === 'plugin_ifauthex') {
+            return true;
+        }
+        return parent::accepts($mode);
     }
 
     /** @inheritDoc */
@@ -86,7 +121,6 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
 
         // never cache
         $renderer->nocache();
-        global $TOC;
 
         switch ($state) {
             case DOKU_LEXER_ENTER:
@@ -97,13 +131,11 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                 try {
                     // check if current user should see the content
                     $exprOrMatch = auth_expr_parse($exprOrMatch);
-                    $renderPermissionThisTag = (bool) $exprOrMatch->evaluate();
-                    $shouldRenderOld = $this->renderPermissionAllTags();
-                    array_push( self::$renderPermissionArr, $renderPermissionThisTag);
-                    $shouldRenderNew = $this->renderPermissionAllTags();
+                    $exprPermission = (bool) $exprOrMatch->evaluate();
+                    $shouldRender = $this->innermostShouldRender() && $exprPermission;
 
-                    // Become active if renderPermission changes from true to false
-                    if ($shouldRenderOld && (!$shouldRenderNew)) {
+                    // Save the state only at the first occurrence
+                    if ($this->innermostShouldRender() && !$exprPermission) {
                         // point the renderer's doc to something else, remembering the old one
                         $renderer->meta['ifauthex.originalDoc'] = &$renderer->doc;
                         $ignoredDoc = is_array($renderer->doc) ? [] : '';
@@ -113,9 +145,16 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                         $ignoredToc = [];
                         $renderer->meta['ifauthex.originalToc'] = &$renderer->toc;
                         $renderer->toc = &$ignoredToc;
-                        $TOC = $ignoredToc;
 
+                        // patch the global TOC, if defined
+                        global $TOC;
+                        $renderer->meta['ifauthex.originalGlobalToc'] = &$TOC;
+                        $TOC = is_array($TOC) ? [] : null;
                     }
+
+                    // Push the new rendering permission
+                    $this->pushInnerPermission($exprPermission);
+
                 } catch (Exception $e) {
                     // something went wrong parsing the expression
                     msg(hsc($e->getMessage()), -1);
@@ -127,29 +166,19 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
                 break;
             case DOKU_LEXER_EXIT:
                 // point the renderer's doc and toc back to the original
-                $shouldRenderOld = $this->renderPermissionAllTags();
-                array_pop(self::$renderPermissionArr);
-                $shouldRenderNew = $this->renderPermissionAllTags();
+                $shouldRenderOld = $this->popShouldRender();
 
-                // Become active if renderPermission changes from false to true
-                if( (!$shouldRenderOld) && $shouldRenderNew ) {
+                // Become active if innermostShouldRender changes from false to true
+                if (!$shouldRenderOld && $this->innermostShouldRender()) {
                     $renderer->doc = &$renderer->meta['ifauthex.originalDoc'];
                     $renderer->toc = &$renderer->meta['ifauthex.originalToc'];
-                    $TOC = &$renderer->meta['ifauthex.originalToc'];
+
+                    global $TOC;
+                    $TOC = &$renderer->meta['ifauthex.originalGlobalToc'];
                 }
                 break;
         }
 
-        return true;
-    }
-
-    private function renderPermissionAllTags()
-    {
-        foreach ( self::$renderPermissionArr as $do ) {
-            if(!$do) {
-                return false;
-            }
-        }
         return true;
     }
 }
