@@ -331,10 +331,15 @@ class general_plugin_ifauthex_test extends DokuWikiTest
     public function test_plugin_conf()
     {
         $conf_file = __DIR__ . '/../conf/default.php';
+        $meta_file = __DIR__ . '/../conf/metadata.php';
+
+        if (!file_exists($conf_file) && !file_exists($meta_file)) {
+            self::markTestSkipped('No config files exist -> skipping test');
+        }
+
         if (file_exists($conf_file)) {
             include($conf_file);
         }
-        $meta_file = __DIR__ . '/../conf/metadata.php';
         if (file_exists($meta_file)) {
             include($meta_file);
         }
@@ -345,7 +350,7 @@ class general_plugin_ifauthex_test extends DokuWikiTest
             'Both ' . DOKU_PLUGIN . 'ifauthex/conf/default.php and ' . DOKU_PLUGIN . 'ifauthex/conf/metadata.php have to exist and contain the same keys.'
         );
 
-        if (gettype($conf) != 'NULL' && gettype($meta) != 'NULL') {
+        if ($conf !== null && $meta !== null) {
             foreach ($conf as $key => $value) {
                 $this->assertArrayHasKey(
                     $key,

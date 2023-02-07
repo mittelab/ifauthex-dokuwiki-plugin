@@ -2,25 +2,25 @@ stages:
   - test
   - release
 
+variables:
+  PLUGIN_NAME: ifauthex
+
 unit_test:
   stage: test
-  image: php
+  image: php:8.2.1
   before_script:
     - apt-get update -yqq
-    - apt-get install -yqq git curl ca-certificates libxml2-dev libonig-dev
-    - docker-php-ext-install mbstring xml
-    - curl https://phar.phpunit.de/phpunit-7.5.9.phar -L -o phpunit.phar
-    - chmod +x phpunit.phar
-    - mv phpunit.phar /usr/local/bin/phpunit
-    - git clone git://github.com/splitbrain/dokuwiki.git
+    - apt-get install -yqq git # curl ca-certificates libxml2-dev libonig-dev
+    - git clone https://github.com/splitbrain/dokuwiki.git
     - pushd dokuwiki/lib/plugins
-    - ln -s $CI_PROJECT_DIR $PLUGIN_NAME
+    - ln -s $CI_PROJECT_DIR "${PLUGIN_NAME}"
+    - popd
+    - pushd dokuwiki/_test
+    - php fetchphpunit.php
     - popd
   script:
     - cd dokuwiki/_test
-    - phpunit --stderr --group plugin_$PLUGIN_NAME
-  variables:
-    PLUGIN_NAME: ifauthex
+    - php phpunit.phar --group "plugin_${PLUGIN_NAME}"
 
 package:
   image: alpine
@@ -30,10 +30,9 @@ package:
   before_script:
     - apk --update --no-cache add zip
   script:
-    - zip -r $PLUGIN_NAME.zip *
+    - zip -r "${PLUGIN_NAME}.zip" *
   artifacts:
     paths:
-      - "$PLUGIN_NAME.zip"
+      - "${PLUGIN_NAME}.zip"
   variables:
     GIT_STRATEGY: clone
-    PLUGIN_NAME: ifauthex
