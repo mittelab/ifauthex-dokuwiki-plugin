@@ -1,7 +1,7 @@
 base   ifauthex
 author Pietro Saccardi
 email  lizardm4@gmail.com
-date   2023-02-07
+date   2023-02-08
 name   ifauthex plugin
 desc   Toggle DokuWiki page content based on users and groups with arbitrary boolean expressions.
 url    https://git.mittelab.org/proj/ifauthex-dokuwiki-plugin
