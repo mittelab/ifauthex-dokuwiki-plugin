@@ -136,6 +136,11 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
 
                     // Save the state only at the first occurrence
                     if ($this->innermostShouldRender() && !$exprPermission) {
+                        if ($renderer->getFormat() === 'xhtml') {
+                            // save the level so we can detect if we have opened a new section via a header or not
+                            $renderer->meta['ifauthex.originalLevel'] = $renderer->getLastlevel();
+                        }
+
                         // point the renderer's doc to something else, remembering the old one
                         $renderer->meta['ifauthex.originalDoc'] = &$renderer->doc;
                         $ignoredDoc = is_array($renderer->doc) ? [] : '';
@@ -175,6 +180,20 @@ class syntax_plugin_ifauthex extends DokuWiki_Syntax_Plugin
 
                     global $TOC;
                     $TOC = &$renderer->meta['ifauthex.originalGlobalToc'];
+
+                    if ($renderer->getFormat() === 'xhtml') {
+                        /*
+                        Detect whether a section was opened in the meanwhile. This happens due to a header being issued inside
+                        the hidden section. However, if we started at lev 0, and gotten at lev > 0, the lexer/parser combo will
+                        have included a section_close command somewhere in the remaining part of the document.
+                        We thus have to match that section_close with a corresponding section_open; the opening has occurred
+                        within the hidden body, so we manually add a patch section_open entry.
+                        See https://github.com/mittelab/ifauthex-dokuwiki-plugin/issues/8.
+                        */
+                        if ($renderer->meta['ifauthex.originalLevel'] === 0 && $renderer->getLastlevel() > 0) {
+                            $renderer->section_open($renderer->getLastlevel());
+                        }
+                    }
                 }
                 break;
         }

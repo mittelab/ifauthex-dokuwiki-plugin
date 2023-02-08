@@ -1,0 +1,7 @@
+<ifauth @nonexistent>
+====== Hidden ======
+Hidden content.
+</ifauth>
+
+====== Public ======
+Not hidden content.

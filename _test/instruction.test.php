@@ -15,11 +15,11 @@ class instructions_plugin_ifauthex_test extends DokuWikiTest
     public function test_instructions()
     {
 
-        $calls = p_get_instructions(file_get_contents(__DIR__.'/testpage.txt'));
+        $calls = p_get_instructions(file_get_contents(__DIR__.'/test_page.txt'));
 
         $calls = array_map([self::class, 'stripByteIndex'], $calls);
 
-        $this->assertJsonStringEqualsJsonFile(__DIR__.'/testpage.json', json_encode($calls));
+        $this->assertJsonStringEqualsJsonFile(__DIR__.'/test_page.json', json_encode($calls));
 
         //print_r(json_encode($calls));
     }
@@ -27,13 +27,30 @@ class instructions_plugin_ifauthex_test extends DokuWikiTest
     public function test_nested_instructions()
     {
 
-        $calls = p_get_instructions(file_get_contents(__DIR__.'/testpagenested.txt'));
+        $calls = p_get_instructions(file_get_contents(__DIR__.'/test_nested.txt'));
 
         $calls = array_map([self::class, 'stripByteIndex'], $calls);
 
-        $this->assertJsonStringEqualsJsonFile(__DIR__.'/testpagenested.json', json_encode($calls));
+        $this->assertJsonStringEqualsJsonFile(__DIR__.'/test_nested.json', json_encode($calls));
 
         // print_r(json_encode($calls));
+    }
+
+    public function test_header()
+    {
+
+        $info = array();
+        $calls = p_get_instructions(file_get_contents(__DIR__.'/test_hidden_first_header.txt'));
+        $xhtml = p_render('xhtml', $calls, $info);
+
+        $doc = new DOMDocument();
+        $this->assertTrue($doc->loadHTML($xhtml));
+
+        $calls = p_get_instructions(file_get_contents(__DIR__.'/test_visible_first_header.txt'));
+        $xhtml = p_render('xhtml', $calls, $info);
+
+        $doc = new DOMDocument();
+        $this->assertTrue($doc->loadHTML($xhtml));
     }
 
     /**
