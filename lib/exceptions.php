@@ -7,7 +7,7 @@ class UnknownTokenException extends Exception {
     private $_text = null;
     private $_position = null;
 
-    public function __construct($text, $position, $code = 0, Exception $previous = null) {
+    public function __construct($text, $position, $code = 0, ?Exception $previous = null) {
         $this->_text = $text;
         $this->_position = $position;
         $message = 'Unknown token "';
@@ -31,7 +31,7 @@ class UnknownTokenException extends Exception {
 class MalformedExpressionException extends Exception {
     private $_elementInstance = null;
 
-    public function __construct($elementInstance, $message, $code = 0, Exception $previous = null) {
+    public function __construct($elementInstance, $message, $code = 0, ?Exception $previous = null) {
         $this->_elementInstance = $elementInstance;
         parent::__construct($message, $code, $previous);
     }
@@ -46,7 +46,7 @@ class MalformedExpressionException extends Exception {
 class InvalidExpressionException extends Exception  {
     private $_elementInstance = null;
 
-    public function __construct($elementInstance, $message, $code = 0, Exception $previous = null) {
+    public function __construct($elementInstance, $message, $code = 0, ?Exception $previous = null) {
         $this->_elementInstance = $elementInstance;
         parent::__construct($message, $code, $previous);
     }
@@ -61,7 +61,7 @@ class InvalidExpressionException extends Exception  {
 class NotEnoughArgumentsException extends Exception {
     private $_elementDefinition = null;
 
-    public function __construct($elementDefinition, $code = 0, Exception $previous = null) {
+    public function __construct($elementDefinition, $code = 0, ?Exception $previous = null) {
         $this->_elementDefinition = $elementDefinition;
         $message = 'Not enough arguments for operator ' . $elementDefinition->name() . '.';
         if ($elementDefinition->arity() > 0) {
@@ -80,7 +80,7 @@ class NotEnoughArgumentsException extends Exception {
 class StrayTokenException extends Exception {
     private $_tokenInstance = null;
 
-    public function __construct($tokenInstance, $code = 0, Exception $previous = null) {
+    public function __construct($tokenInstance, $code = 0, ?Exception $previous = null) {
         $this->_tokenInstance = $tokenInstance;
         $message = 'Stray token encountered at position ' . $tokenInstance->position() . ', around "';
         if (extension_loaded('mbstring') === true) {
@@ -103,7 +103,7 @@ class UnmatchedWrapperException extends Exception {
     private $_elementDefinition = null;
     private $_firstTokenInstance = null;
 
-    public function __construct($elementDefinition, $firstTokenInstance, $code = 0, Exception $previous = null) {
+    public function __construct($elementDefinition, $firstTokenInstance, $code = 0, ?Exception $previous = null) {
         $this->_elementDefinition = $elementDefinition;
         $this->_firstTokenInstance = $firstTokenInstance;
         $message = 'Unmatched opening token ' . $elementDefinition->tokenDefs()[0] . ' for wrapping operator '

@@ -29,6 +29,10 @@ function mb_preg_match($text, $matchRegex, $position=0) {
         return null;
     }
     $result = mb_ereg_search_pos($matchRegex, $matchRegexOptions);
+    // No match: mb_ereg_search_pos returns false (destructuring it warns on PHP >= 8.5)
+    if (!is_array($result)) {
+        return null;
+    }
     list($matchOfsBytes, $matchLenBytes) = $result;
     // Is the match offset in byte coinciding with the specified position?
     // Or: is the match exactly at $position?
